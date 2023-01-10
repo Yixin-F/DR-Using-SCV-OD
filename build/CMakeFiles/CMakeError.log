@@ -1,0 +1,41 @@
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/ninja" "cmTC_55ea5"
+[1/2] Building C object CMakeFiles/cmTC_55ea5.dir/CheckSymbolExists.c.o
+[2/2] Linking C executable cmTC_55ea5
+FAILED: cmTC_55ea5 
+: && /usr/bin/x86_64-linux-gnu-gcc-6   -rdynamic CMakeFiles/cmTC_55ea5.dir/CheckSymbolExists.c.o  -o cmTC_55ea5   && :
+CMakeFiles/cmTC_55ea5.dir/CheckSymbolExists.c.o：在函数‘main’中：
+CheckSymbolExists.c:(.text+0x1b)：对‘pthread_create’未定义的引用
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+File /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/ninja" "cmTC_0a464"
+[1/2] Building C object CMakeFiles/cmTC_0a464.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_0a464
+FAILED: cmTC_0a464 
+: && /usr/bin/x86_64-linux-gnu-gcc-6 -DCHECK_FUNCTION_EXISTS=pthread_create  -rdynamic CMakeFiles/cmTC_0a464.dir/CheckFunctionExists.c.o  -o cmTC_0a464  -lpthreads && :
+/usr/bin/x86_64-linux-gnu-ld: 找不到 -lpthreads
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+

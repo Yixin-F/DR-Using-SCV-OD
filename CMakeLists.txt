@@ -81,7 +81,6 @@ link_directories(
 # main
 add_executable( ${PROJECT_NAME}_ufo src/main.cpp
   src/ssc.cpp
-  src/session.cpp
 )
 
 add_dependencies(${PROJECT_NAME}_ufo ${catkin_EXPORTED_TARGETS})
