@@ -1,0 +1,88 @@
+common:
+  out_path_: "/home/fyx/ufo_final/src/dataset"
+  multi_: false
+  is_pcd_: true
+  aftTrans_: false
+  kNumOmpCores_: 6   # cores
+  downsample_size_: 0.2  
+  use_intensity_: true
+  skip_: 0   # kf skiped num in mapping
+  save_: true
+  mapping_init_: false
+
+session:
+  # session 1
+  bin_path_1_: "/session/01_session/Bins/"
+  pcd_path_1_: "/session/01_session/Scans/"
+  pose_path_1_: "/session/01_session/transformations.pcd"
+  out_path_1_: "/session/01_session/Scans3Seg/"
+
+  # session 2
+  bin_path_2_: "/session/02_session/Bins/"
+  pcd_path_2_: "/session/02_session/Scans/"
+  pose_path_2_: "/session/02_session/transformations.pcd"
+  out_path_2_: "/session/02_session/Scans3Seg/"
+
+ssc:
+  segment_path_1_: "/ssc/01_session/segment/"
+  segment_path_2_: "/ssc/02_session/segment/"
+  relo_path_1_: "/ssc/01_session/relomat/"
+  relo_path_2_: "/ssc/02_session/relomat/"
+  map_path_1_: "/ssc/01_session/semantic_map/"
+  map_path_2_: "/ssc/02_session/semantic_map/"
+
+  min_dis_add_: 0.0   # /m   use 0.0 for parkinglot dataset
+  max_dis_ratio_: 0.5 # ratio
+
+  min_angle_: 0.0  # /deg
+  max_angle_: 360.0
+
+  min_azimuth_: -30.0  # /deg
+  max_azimuth_: 60.0
+
+  range_res_: 0.2
+  sector_res_: 1.0
+  azimuth_res_: 1.8
+
+  toBeClass_: 20  # the min numbers of points to be one class
+  intensity_diff_: 30.0
+  intensity_cov_: 10.0
+  curvature_diff_: 3.0
+  intensity_cov_: 1.5
+  vox_search_: 27  # the num of voxels ready to fusion
+  fusion_thre_: 0.6  # ratio
+  iterator_times_: 3  # reset it, if you need
+  occupancy_: 0.6
+
+  height_: 0.6  # please reset the height boundary, refer to the height of your sensor
+  building_: 0  # cluster map
+  tree_: 1
+  car_: 2
+  other_: 3
+
+feature:
+  kOneThird_: 0.333
+  kLinearityMax_: 288.9
+  kPlanarityMax_: 288.9
+  kScatteringMax_: 2889.9
+  kOmnivarianceMax_: 0.278636
+  kAnisotropyMax_: 1248.0
+  kEigenEntropyMax_: 0.956129
+  kChangeOfCurvatureMax_: 0.99702
+  kNPointsMax_: 13200.0
+  
+  element_num_: 18
+  same_num_: 9
+  same_score_: 0.6
+
+  linearity_thre_: 0.01
+  planarity_thre_: 0.01
+  scattering_thre_: 0.01
+
+
+
+
+  
+
+
+
