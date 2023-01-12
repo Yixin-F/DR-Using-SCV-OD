@@ -71,6 +71,7 @@
 #include "assert.h"
 #include "tictoc.h"
 
+// calibrated-point cloud
 struct PointXYZIC
 {
     PCL_ADD_POINT4D
@@ -84,6 +85,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIC,
                                    (float, z, z) (float, intensity, intensity)
                                    (float, curvature, curvature) )
 
+// pose-point cloud from lio-sam
 struct PointXYZIRPYT
 {
     PCL_ADD_POINT4D
@@ -101,7 +103,8 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
                                    (float, roll, roll) (float, pitch, pitch) (float, yaw, yaw)
                                    (double, time, time))
 
-struct PointAPRI{
+// apiric-format of point
+struct PointAPRIC{
     float x, y, z;
     float range;
     float angle;
@@ -111,53 +114,89 @@ struct PointAPRI{
     int range_idx = -1;
     int sector_idx = -1 ;
     int azimuth_idx = -1;
-    int pt_idx = -1;   // id in noground
-    int voxel_idx = -1;  // voxel id
+    int pt_idx = -1;   // id in noground cloud
+    int voxel_idx = -1;  // id in voxel cloud
 };
 
+// voxel-type in hash cloud
 struct Voxel{
-    std::vector<int> apriIdx;
-    std::vector<int> ptIdx;  // id in noground
-    pcl::PointXYZI center;   // intensity = voxel id
+    std::vector<int> apriIdx;  // the vector of id in apri cloud
+    std::vector<int> ptIdx;  // the vector of id in noground cloud
+    pcl::PointXYZI center;   // the point center's intensity is its id in voxel cloud
     std::unordered_map<int, int> clusterNameAndNum;
     std::vector<float> intensity_record;
     std::vector<float> curvature_record;
-    float intensity_cov = 0.f;
     float intensity_av = 0.f;
+    float intensity_cov = 0.f;
     float curvature_av = 0.f;
     float curvature_cov = 0.f;
 };
 
-struct FeatureValue {
-    FeatureValue() {}
-    FeatureValue(std::string feature_name, double feature_value) : name(feature_name), value(feature_value) {}
+// feature values
+struct FeatureValue{
+    FeatureValue() = delete;
+    FeatureValue(std::string value_name_, double value_) : name(value_name_), value(value_) {}
+    ~FeatureValue() {}
+
     std::string name = "";
     double value = 0.0;
 };
 
+// one type of feature
 struct Feature{
+    Feature() = delete;
     Feature(std::string feature_name): name(feature_name) {}
     ~Feature() {}
+
     std::string name = "";
-    std::vector<FeatureValue> feature_values_;
+    std::vector<FeatureValue> feature_values;
+};
+
+// one cluster
+struct Cluster{
+    Cluster(){
+        allocateMemory();
+    }
+    ~Cluster() {}
+    void allocateMemory(){
+        cluster.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    }
+    
+    std::vector<int> occupy_aprics;
+    std::vector<int> occupy_voxels;
+    std::string type = "";
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cluster;
+    pcl::PointXYZI cluster_center;
+    std::vector<Feature> feature_set;
+};
+
+// one frame
+struct Frame{
+    Frame(){
+        allocateMemory();
+    }
+    ~Frame() {}
+    void allocateMemory(){
+        center_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    }
+
+    float min_dis;
+    float max_dis;
+    std::vector<Cluster> cluster_set;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr center_cloud;
 };
 
 namespace fs = std::filesystem; // file-process
-typedef PointXYZIC pointType;
+typedef PointXYZIC pointCalib;
 typedef PointXYZIRPYT  Pose;
 
 class Utility{
 public:
     std::string out_path;
-    bool multi;
-    bool is_pcd;
-    bool aftTrans;
     int kNumOmpCores;
-    float downsample_size;
-    bool use_intensity;
-    int skip;
     bool save;
     bool mapping_init;
+    float downsample_size;
 
     std::string bin_path_1;
     std::string pcd_path_1;
@@ -216,19 +255,14 @@ public:
 
     ros::NodeHandle nh;
 
-    ~Utility(){}
+    virtual ~Utility(){}
 
     Utility(){
         nh.param<std::string>("common/out_path_", out_path,  " ");
-        nh.param<bool>("common/multi_", multi, false);
-        nh.param<bool>("common/is_pcd_", is_pcd, true);
-        nh.param<bool>("common/aftTrans_", aftTrans, false);
         nh.param<int>("common/kNumOmpCores_", kNumOmpCores, 6);
-        nh.param<float>("common/downsample_size_", downsample_size, 0.2);
-        nh.param<bool>("common/use_intensity_", use_intensity, false);
-        nh.param<int>("common/skip_", skip, 2);
         nh.param<bool>("common/save_", save, true);
         nh.param<bool>("common/mapping_init_", mapping_init, false);
+        nh.param<float>("common/downsample_size_", downsample_size, 0.1);
 
         nh.param<std::string>("session/bin_path_1_", bin_path_1, " ");
         nh.param<std::string>("session/pcd_path_1_", pcd_path_1, " ");
@@ -374,11 +408,11 @@ public:
         std::string save_path = path_ + std::to_string(id) + name_;
         cloud_->height = 1;
         cloud_->width = cloud_->points.size();
-        if(save){
+        if(1){
             if(cloud_->points.size() == 0 || pcl::io::savePCDFile(save_path, *cloud_) == -1){
                 ROS_WARN("%s save error ", (std::to_string(id) + name_).c_str());
             }
-            ROS_DEBUG("%s save success, pt_num %d", save_path.c_str(), (int)cloud_->points.size());
+            ROS_DEBUG("cloud save: %s save success, pt_num %d", save_path.c_str(), (int)cloud_->points.size());
         }
     }
 

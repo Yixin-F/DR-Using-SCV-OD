@@ -57,6 +57,7 @@ public:
             throw invalid_argument("Some parameters are wrong! Check the elevation/flatness_thresholds");
         }
 
+        cout << (boost::format("sensor height: %f") % sensor_height_).str() << endl;
         cout << (boost::format("Num. sectors: %d, %d, %d, %d") % num_sectors_each_zone_[0] % num_sectors_each_zone_[1] %
                  num_sectors_each_zone_[2] %
                  num_sectors_each_zone_[3]).str() << endl;
@@ -111,15 +112,15 @@ public:
 
 private:
 
-    int num_iter_ = 3; // 3
+    int num_iter_ = 3;
     int num_lpr_ = 20;
-    int num_min_pts_ = 8; // 10
+    int num_min_pts_ = 10; 
     int num_rings_ = 30;
     int num_sectors_ = 108;
     int num_zones_ = 4;
     int num_rings_of_interest_ = 2.7;
 
-    double sensor_height_ = 0.6;  // 1.723, parkinglot 0.6
+    double sensor_height_ = 0.7;  // 1.723, parkinglot 0.7
     double th_seeds_ = 0.5;
     double th_dist_ = 0.125;
     double max_range_ = 120.0;

@@ -1,14 +1,9 @@
 common:
   out_path_: "/home/fyx/ufo_final/src/dataset"
-  multi_: false
-  is_pcd_: true
-  aftTrans_: false
   kNumOmpCores_: 6   # cores
-  downsample_size_: 0.2  
-  use_intensity_: true
-  skip_: 0   # kf skiped num in mapping
   save_: true
   mapping_init_: false
+  downsample_size_: 0.1
 
 session:
   # session 1
@@ -31,8 +26,8 @@ ssc:
   map_path_1_: "/ssc/01_session/semantic_map/"
   map_path_2_: "/ssc/02_session/semantic_map/"
 
-  min_dis_add_: 0.0   # /m   use 0.0 for parkinglot dataset
-  max_dis_ratio_: 0.5 # ratio
+  min_dis_add_:  1.0  # /m   use 0.0 for parkinglot dataset
+  max_dis_ratio_: 0.6 # ratio
 
   min_angle_: 0.0  # /deg
   max_angle_: 360.0
@@ -42,7 +37,7 @@ ssc:
 
   range_res_: 0.2
   sector_res_: 1.0
-  azimuth_res_: 1.8
+  azimuth_res_: 2.0
 
   toBeClass_: 20  # the min numbers of points to be one class
   intensity_diff_: 30.0

@@ -1,0 +1,18 @@
+<launch>
+
+    <arg name="project" default="ufo"/>
+
+    <!--- Run Rviz-->
+    <!--<node pkg="rviz" type="rviz" name="rviz" args="-d $(find removert)/launch/removert_visualization.rviz" />-->
+
+    <!-- Parameters -->
+    <rosparam file="/home/fyx/ufo_hiahia/src/ufo/config/parkinglot.yaml"  command="load" />
+
+    <!--- ufo -->
+    <node pkg="$(arg project)" type="$(arg project)_ufo"   name="$(arg project)_ufo"   output="screen"/>
+
+
+    <!--- Run Rviz-->
+    <!-- <include file="$(find lio_sam)/launch/include/module_rviz.launch" /> -->
+
+</launch>
