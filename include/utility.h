@@ -34,7 +34,7 @@
 #include <pcl/search/search.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_3d_omp.h>
 #include <pcl/segmentation/region_growing.h>
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
@@ -197,6 +197,7 @@ public:
     bool save;
     bool mapping_init;
     float downsample_size;
+    float sensor_height;
 
     std::string bin_path_1;
     std::string pcd_path_1;
@@ -222,6 +223,9 @@ public:
     float range_res;
     float sector_res;
     float azimuth_res;
+    float max_intensity;
+    float correct_radius;
+    int search_num;
     int toBeClass;
     float intensity_diff;
     float curvature_diff;
@@ -263,6 +267,7 @@ public:
         nh.param<bool>("common/save_", save, true);
         nh.param<bool>("common/mapping_init_", mapping_init, false);
         nh.param<float>("common/downsample_size_", downsample_size, 0.1);
+        nh.param<float>("common/sensor_height_", sensor_height, 3.0);
 
         nh.param<std::string>("session/bin_path_1_", bin_path_1, " ");
         nh.param<std::string>("session/pcd_path_1_", pcd_path_1, " ");
@@ -279,7 +284,7 @@ public:
         nh.param<std::string>("ssc/relo_path_2_", relo_path_2, " ");
         nh.param<std::string>("ssc/map_path_1_", map_path_1, " ");
         nh.param<std::string>("ssc/map_path_2_", map_path_2, " ");
-        nh.param<float>("ssc/min_dis_add_", min_dis_add, 2.0);
+        nh.param<float>("ssc/min_dis_add_", min_dis_add, 1.0);
         nh.param<float>("ssc/max_dis_ratio_", max_dis_ratio, 0.8);
         nh.param<float>("ssc/min_angle_", min_angle, 0.0);
         nh.param<float>("ssc/max_angle_", max_angle, 360.0);
@@ -288,6 +293,9 @@ public:
         nh.param<float>("ssc/range_res_", range_res, 0.2);
         nh.param<float>("ssc/sector_res_", sector_res, 1.2);
         nh.param<float>("ssc/azimuth_res_", azimuth_res, 2.0);
+        nh.param<float>("ssc/max_intensity_", max_intensity, 200.0);
+        nh.param<float>("ssc/correct_radius_", correct_radius, 0.5);
+        nh.param<int>("ssc/search_num_", search_num, 10);
         nh.param<int>("ssc/toBeClass_", toBeClass, 1);
         nh.param<float>("ssc/intensity_diff_", intensity_diff, 50);
         nh.param<float>("ssc/curvature_diff_", curvature_diff, 2.5);

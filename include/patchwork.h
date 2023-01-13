@@ -120,7 +120,7 @@ private:
     int num_zones_ = 4;
     int num_rings_of_interest_ = 2.7;
 
-    double sensor_height_ = 0.7;  // 1.723, parkinglot 0.7
+    double sensor_height_ = 3.2;  // 1.723, parkinglot 0.5
     double th_seeds_ = 0.5;
     double th_dist_ = 0.125;
     double max_range_ = 120.0;

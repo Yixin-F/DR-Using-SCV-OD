@@ -34,7 +34,7 @@ public:
     void extractGroudByPatchWork(const pcl::PointCloud<pcl::PointXYZI>::Ptr& src_cloud_);
 
     // calibrate point by intensity and curvature
-    void intensityAndCurvatureCalibration();
+    void intensityAndCurvatureCalibration(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pointCalib>::Ptr& cloud_calib_);
 
     // generate hashcloud
     std::pair<std::pair<float, float>, std::vector<PointAPRIC>> makeAPRIC(const pcl::PointCloud<pointCalib>::Ptr& cloudCalib_);  // return min_dis&max_dis of original pointcloud and apric_vec without range constraint
@@ -42,7 +42,7 @@ public:
 
 
     // tool
-    void downSample(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
+    void downSampleAndDistanceSelect(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
     void intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
     pcl::PointCloud<pcl::PointXYZI>::Ptr getVoxelFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
     float occupancyUseVoxel(const std::vector<int>& voxels1_, const std::vector<int>& voxels2_);

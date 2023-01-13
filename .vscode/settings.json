@@ -61,6 +61,13 @@
         "set": "cpp",
         "string": "cpp",
         "string_view": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "cwctype": "cpp",
+        "codecvt": "cpp",
+        "condition_variable": "cpp",
+        "csignal": "cpp",
+        "mutex": "cpp",
+        "system_error": "cpp",
+        "typeindex": "cpp"
     }
 }

@@ -4,6 +4,7 @@ common:
   save_: true
   mapping_init_: false
   downsample_size_: 0.1
+  sensor_height_: 3.2  # you need to check it, becauseit's very importatn for patchwork to extract ground
 
 session:
   # session 1
@@ -38,6 +39,10 @@ ssc:
   range_res_: 0.2
   sector_res_: 1.0
   azimuth_res_: 2.0
+
+  max_intensity_: 200.0
+  correct_radius_: 0.5
+  search_num_: 10
 
   toBeClass_: 20  # the min numbers of points to be one class
   intensity_diff_: 30.0
