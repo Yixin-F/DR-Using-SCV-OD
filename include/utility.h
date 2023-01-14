@@ -106,7 +106,6 @@ struct PointAPRI{
 struct Voxel{
     std::vector<int> ptIdx;  // the vector of id in noground cloud
     pcl::PointXYZI center;   // the point center's intensity is its id in voxel cloud
-    std::unordered_map<int, int> clusterNameAndNum;
     std::vector<float> intensity_record;
     float intensity_av = 0.f;
     float intensity_cov = 0.f;

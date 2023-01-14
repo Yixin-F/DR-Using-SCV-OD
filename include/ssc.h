@@ -42,7 +42,7 @@ public:
     pcl::PointCloud<pcl::PointXYZI>::Ptr getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
 
     // segment
-    
+    void cluster()
 
     // tool
     
