@@ -15,6 +15,9 @@ int main(int argc, char** argv){
     ssc.process(test);
     ssc.makeHashCloud(ssc.apri_vec);
 
+    pcl::PointCloud<pcl::PointXYZI>::Ptr voxel_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    voxel_cloud = ssc.getVoxelCloudFromHashCloud(ssc.hash_cloud);
+
     ros::spin();
 
     return 0;

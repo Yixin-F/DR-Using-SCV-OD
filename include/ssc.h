@@ -41,10 +41,10 @@ public:
 
     // segment
     void makeHashCloud(const std::vector<PointAPRI>& apriIn_);  // return apric_vec with range constraint and hashcloud without label
-
+    pcl::PointCloud<pcl::PointXYZI>::Ptr getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
 
     // tool
-    pcl::PointCloud<pcl::PointXYZI>::Ptr getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
+    
     float occupancyUseVoxel(const std::vector<int>& voxels1_, const std::vector<int>& voxels2_);
 
 
