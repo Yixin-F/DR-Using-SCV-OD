@@ -13,15 +13,14 @@ public:
     int azimuth_num = -1;
     int bin_num = -1;
 
-    float min_dis = -1;  // refer to the previous frame
-    float max_dis = -1;
+    float min_dis = 999999.f;  // refer to the previous frame
+    float max_dis = -999999.f;
+    double sensor_height = -999999.f;
 
     Frame frame_ssc;
 
-    pcl::PointCloud<pcl::PointXYZI>::Ptr src_cloud;  // original cloud
     boost::shared_ptr<PatchWork<pcl::PointXYZI>> PatchworkGroundSeg;   // patchwork
-    pcl::PointCloud<pcl::PointXYZI>::Ptr ng_cloud;  // noground cloud
-    pcl::PointCloud<pointCalib>::Ptr ng_cloud_calib;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;  // noground cloud
 
     ~SSC();
     SSC();
@@ -30,11 +29,13 @@ public:
     void allocateMemory();
     void reset();
 
-    // extract ground by pathwork
-    void extractGroudByPatchWork(const pcl::PointCloud<pcl::PointXYZI>::Ptr& src_cloud_);
-
-    // calibrate point by intensity and curvature
-    void intensityAndCurvatureCalibration(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pointCalib>::Ptr& cloud_calib_);
+    // pre-process pointcloud
+    void process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);
+    void getCloudInfo(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr extractGroudByPatchWork(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);  // extract ground by pathwork
+    void intensityCalibrationByCurvature(pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);  // calibrate point by intensity by curvature
+    void downSampleAndDistanceSelect(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
+    void intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
 
     // generate hashcloud
     std::pair<std::pair<float, float>, std::vector<PointAPRIC>> makeAPRIC(const pcl::PointCloud<pointCalib>::Ptr& cloudCalib_);  // return min_dis&max_dis of original pointcloud and apric_vec without range constraint
@@ -42,8 +43,6 @@ public:
 
 
     // tool
-    void downSampleAndDistanceSelect(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
-    void intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
     pcl::PointCloud<pcl::PointXYZI>::Ptr getVoxelFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
     float occupancyUseVoxel(const std::vector<int>& voxels1_, const std::vector<int>& voxels2_);
 

@@ -12,13 +12,7 @@ int main(int argc, char** argv){
     // ssc test: 2023.1.12 start ~
     SSC ssc;
 
-    ssc.extractGroudByPatchWork(test);
-
-    ssc.intensityAndCurvatureCalibration(ssc.ng_cloud, ssc.ng_cloud_calib);
-
-    ssc.intensityVisualization(ssc.ng_cloud);
-
-    
+    ssc.process(test);
 
     ros::spin();
 

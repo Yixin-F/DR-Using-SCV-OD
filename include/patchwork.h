@@ -57,7 +57,6 @@ public:
             throw invalid_argument("Some parameters are wrong! Check the elevation/flatness_thresholds");
         }
 
-        cout << (boost::format("sensor height: %f") % sensor_height_).str() << endl;
         cout << (boost::format("Num. sectors: %d, %d, %d, %d") % num_sectors_each_zone_[0] % num_sectors_each_zone_[1] %
                  num_sectors_each_zone_[2] %
                  num_sectors_each_zone_[3]).str() << endl;
@@ -109,6 +108,7 @@ public:
             pcl::PointCloud<PointT> &cloudNonground,
             double &time_taken);
 
+    void set_sensor(const double& height);
 
 private:
 
@@ -120,7 +120,7 @@ private:
     int num_zones_ = 4;
     int num_rings_of_interest_ = 2.7;
 
-    double sensor_height_ = 3.2;  // 1.723, parkinglot 0.5
+    double sensor_height_;  // 1.723, parkinglot 0.5
     double th_seeds_ = 0.5;
     double th_dist_ = 0.125;
     double max_range_ = 120.0;
@@ -395,6 +395,11 @@ void PatchWork<PointT>::estimate_ground(
 //    time_txt<<t0 - start<<" "<<t1 - t0 <<" "<<t2-t1<<" "<<t_total_ground<< " "<<t_total_estimate<<"\n";
 //    time_txt.close();
 
+}
+
+template<typename PointT> inline
+void PatchWork<PointT>::set_sensor(const double& height){
+    sensor_height_ = height;
 }
 
 template<typename PointT> inline
