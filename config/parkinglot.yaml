@@ -1,10 +1,9 @@
 common:
   out_path_: "/home/fyx/ufo_final/src/dataset"
-  kNumOmpCores_: 6   # cores
+  kNumOmpCores_: 8   # cores
   save_: true
   mapping_init_: false
-  downsample_size_: 0.1
-  sensor_height_: 3.2  # you need to check it, becauseit's very importatn for patchwork to extract ground
+  downsample_size_: 0.08
 
 session:
   # session 1
@@ -41,7 +40,8 @@ ssc:
   azimuth_res_: 2.0
 
   max_intensity_: 200.0
-  correct_radius_: 0.5
+  correct_ratio_: 0.3
+  correct_radius_: 0.3
   search_num_: 10
 
   toBeClass_: 20  # the min numbers of points to be one class

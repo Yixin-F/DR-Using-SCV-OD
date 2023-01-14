@@ -13,6 +13,7 @@ int main(int argc, char** argv){
     SSC ssc;
 
     ssc.process(test);
+    ssc.makeHashCloud(ssc.apri_vec);
 
     ros::spin();
 

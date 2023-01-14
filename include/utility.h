@@ -71,20 +71,6 @@
 #include "assert.h"
 #include "tictoc.h"
 
-// calibrated-point cloud
-struct PointXYZIC
-{
-    PCL_ADD_POINT4D
-    PCL_ADD_INTENSITY;                  
-    float curvature;
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW   
-} EIGEN_ALIGN16;                  
-
-POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIC,
-                                   (float, x, x) (float, y, y)
-                                   (float, z, z) (float, intensity, intensity)
-                                   (float, curvature, curvature) )
-
 // pose-point cloud from lio-sam
 struct PointXYZIRPYT
 {
@@ -104,32 +90,26 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
                                    (double, time, time))
 
 // apiric-format of point
-struct PointAPRIC{
+struct PointAPRI{
     float x, y, z;
     float range;
     float angle;
     float azimuth;
     float intensity = 0.f;
-    float curvature = 0.f;
     int range_idx = -1;
     int sector_idx = -1 ;
     int azimuth_idx = -1;
-    int pt_idx = -1;   // id in noground cloud
     int voxel_idx = -1;  // id in voxel cloud
 };
 
 // voxel-type in hash cloud
 struct Voxel{
-    std::vector<int> apriIdx;  // the vector of id in apri cloud
     std::vector<int> ptIdx;  // the vector of id in noground cloud
     pcl::PointXYZI center;   // the point center's intensity is its id in voxel cloud
     std::unordered_map<int, int> clusterNameAndNum;
     std::vector<float> intensity_record;
-    std::vector<float> curvature_record;
     float intensity_av = 0.f;
     float intensity_cov = 0.f;
-    float curvature_av = 0.f;
-    float curvature_cov = 0.f;
 };
 
 // feature values
@@ -187,7 +167,6 @@ struct Frame{
 };
 
 namespace fs = std::filesystem; // file-process
-typedef PointXYZIC pointCalib;
 typedef PointXYZIRPYT  Pose;
 
 class Utility{
@@ -197,7 +176,6 @@ public:
     bool save;
     bool mapping_init;
     float downsample_size;
-    float sensor_height;
 
     std::string bin_path_1;
     std::string pcd_path_1;
@@ -223,9 +201,12 @@ public:
     float range_res;
     float sector_res;
     float azimuth_res;
+
     float max_intensity;
+    float correct_ratio;
     float correct_radius;
     int search_num;
+
     int toBeClass;
     float intensity_diff;
     float curvature_diff;
@@ -267,7 +248,6 @@ public:
         nh.param<bool>("common/save_", save, true);
         nh.param<bool>("common/mapping_init_", mapping_init, false);
         nh.param<float>("common/downsample_size_", downsample_size, 0.1);
-        nh.param<float>("common/sensor_height_", sensor_height, 3.0);
 
         nh.param<std::string>("session/bin_path_1_", bin_path_1, " ");
         nh.param<std::string>("session/pcd_path_1_", pcd_path_1, " ");
@@ -293,9 +273,12 @@ public:
         nh.param<float>("ssc/range_res_", range_res, 0.2);
         nh.param<float>("ssc/sector_res_", sector_res, 1.2);
         nh.param<float>("ssc/azimuth_res_", azimuth_res, 2.0);
+
         nh.param<float>("ssc/max_intensity_", max_intensity, 200.0);
         nh.param<float>("ssc/correct_radius_", correct_radius, 0.5);
+        nh.param<float>("ssc/correct_ratio_", correct_ratio, 0.5);
         nh.param<int>("ssc/search_num_", search_num, 10);
+
         nh.param<int>("ssc/toBeClass_", toBeClass, 1);
         nh.param<float>("ssc/intensity_diff_", intensity_diff, 50);
         nh.param<float>("ssc/curvature_diff_", curvature_diff, 2.5);

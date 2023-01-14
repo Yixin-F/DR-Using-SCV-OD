@@ -17,6 +17,8 @@ public:
     float max_dis = -999999.f;
     double sensor_height = -999999.f;
 
+    std::vector<PointAPRI> apri_vec;
+    std::unordered_map<int, Voxel> hash_cloud;
     Frame frame_ssc;
 
     boost::shared_ptr<PatchWork<pcl::PointXYZI>> PatchworkGroundSeg;   // patchwork
@@ -34,16 +36,15 @@ public:
     void getCloudInfo(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);
     pcl::PointCloud<pcl::PointXYZI>::Ptr extractGroudByPatchWork(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);  // extract ground by pathwork
     void intensityCalibrationByCurvature(pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);  // calibrate point by intensity by curvature
-    void downSampleAndDistanceSelect(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
+    void downSampleAndMakeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
     void intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
 
-    // generate hashcloud
-    std::pair<std::pair<float, float>, std::vector<PointAPRIC>> makeAPRIC(const pcl::PointCloud<pointCalib>::Ptr& cloudCalib_);  // return min_dis&max_dis of original pointcloud and apric_vec without range constraint
-    std::pair<std::vector<PointAPRIC>, std::unordered_map<int, Voxel>> makeHashCloud(const std::vector<PointAPRIC>& apriIn_, const float& minDis_, const float& maxDis_);  // return apric_vec with range constraint and hashcloud without label
+    // segment
+    void makeHashCloud(const std::vector<PointAPRI>& apriIn_);  // return apric_vec with range constraint and hashcloud without label
 
 
     // tool
-    pcl::PointCloud<pcl::PointXYZI>::Ptr getVoxelFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
     float occupancyUseVoxel(const std::vector<int>& voxels1_, const std::vector<int>& voxels2_);
 
 
