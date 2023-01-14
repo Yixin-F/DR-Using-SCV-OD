@@ -142,7 +142,7 @@ struct Cluster{
         cluster.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
     
-    std::vector<int> occupy_aprics;
+    std::vector<int> occupy_pts;
     std::vector<int> occupy_voxels;
     std::string type = "";
     pcl::PointCloud<pcl::PointXYZI>::Ptr cluster;

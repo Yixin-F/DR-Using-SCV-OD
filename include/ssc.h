@@ -38,10 +38,11 @@ public:
     void intensityCalibrationByCurvature(pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);  // calibrate point by intensity by curvature
     void downSampleAndMakeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
     void intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
+    void makeHashCloud(const std::vector<PointAPRI>& apriIn_);  
+    pcl::PointCloud<pcl::PointXYZI>::Ptr getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
 
     // segment
-    void makeHashCloud(const std::vector<PointAPRI>& apriIn_);  // return apric_vec with range constraint and hashcloud without label
-    pcl::PointCloud<pcl::PointXYZI>::Ptr getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
+    
 
     // tool
     

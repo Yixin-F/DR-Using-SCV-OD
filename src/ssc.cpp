@@ -58,10 +58,13 @@ void SSC::getCloudInfo(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
         }
     }
     sensor_height = std::fabs(min_z) - 0.5;
-    if(min_dis <= min_dis_add){
+    // if(min_dis <= min_dis_add){
+    //     min_dis = min_dis_add;
+    // }
+    // min_dis += min_dis_add;
+    if(1){
         min_dis = min_dis_add;
     }
-    // min_dis += min_dis_add;
     max_dis *= max_dis_ratio;
 
     range_num = (int)std::ceil((max_dis - min_dis) / range_res);   // get ssc params
@@ -316,7 +319,13 @@ void SSC::process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
     // intenisty save
     intensityVisualization(cloud_use);
 
-    ROS_DEBUG("pre-process: time_use(ms): %0.2f, valid pointcloud size: %d, apri_vec size: %d", (float)process_t.toc(), (int)cloud_use->points.size(), (int)apri_vec.size());
+    // make hash cloud
+    makeHashCloud(apri_vec);
+
+    // get voxel cloud
+    getVoxelCloudFromHashCloud(hash_cloud);
+
+    ROS_DEBUG("pre-process: time_use(ms): %0.2f, valid pointcloud size: %d, apri_vec size: %d, hash_cloud size: %d", (float)process_t.toc(), (int)cloud_use->points.size(), (int)apri_vec.size(), (int)hash_cloud.size());
 }
 
 void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
@@ -336,7 +345,7 @@ void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
             voxel.intensity_av += apri.intensity;
             float range_center = (apri.range_idx * 2 + 1) / 2 * range_res;
             float sector_center = deg2rad((apri.sector_idx * 2 + 1) / 2 * sector_res);
-            float azimuth_center = deg2rad((apri.azimuth_idx * 2 + 1) / 2 * azimuth_res);
+            float azimuth_center = deg2rad((apri.azimuth_idx * 2 + 1) / 2 * azimuth_res) + deg2rad(min_azimuth);
             voxel.center.x = range_center * std::cos(sector_center);
             voxel.center.y = range_center * std::sin(sector_center);
             voxel.center.z = range_center * std::tan(azimuth_center);
@@ -354,8 +363,6 @@ void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
         vox.second.intensity_cov /= vox.second.ptIdx.size();
         // std::cout << "vox.second.ptIdx.size(): " << vox.second.ptIdx.size() <<   " vox.second.intensity_av: " << vox.second.intensity_av << " vox.second.intensity_cov: " << vox.second.intensity_cov << std::endl;
     }
-
-    ROS_DEBUG("vaild hash_cloud size: %d", (int)hash_cloud.size());
 }
 
 pcl::PointCloud<pcl::PointXYZI>::Ptr SSC::getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_){
@@ -364,6 +371,7 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr SSC::getVoxelCloudFromHashCloud(const std::
         voxel_cloud->points.push_back(vox.second.center);
     }
     std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
-    saveCloud(cloud_rgb, save_path, 179, "_vox.pcd");
+    saveCloud(voxel_cloud, save_path, 179, "_vox.pcd");
     return voxel_cloud;
 }
+
