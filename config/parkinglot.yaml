@@ -36,7 +36,7 @@ ssc:
   max_azimuth_: 60.0
 
   range_res_: 0.2
-  sector_res_: 1.0
+  sector_res_: 1.2
   azimuth_res_: 2.0
 
   max_intensity_: 200.0

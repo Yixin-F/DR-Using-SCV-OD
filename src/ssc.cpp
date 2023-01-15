@@ -80,7 +80,7 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr SSC::extractGroudByPatchWork(const pcl::Poi
     pcl::PointCloud<pcl::PointXYZI>::Ptr ng_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     PatchworkGroundSeg->set_sensor(sensor_height);
     PatchworkGroundSeg->estimate_ground(*cloudIn_, *g_cloud, *ng_cloud, time_pw);
-    ROS_DEBUG("patchwork extract ground: time_use(ms): %0.2f, pointcloud without ground size:: %d", time_pw / 1e+3, (int)ng_cloud->points.size());
+    ROS_DEBUG("patchwork extract ground: time_use(ms): %0.2f, pointcloud with no ground size:: %d", time_pw / 1e+3, (int)ng_cloud->points.size());
     return ng_cloud;
 }
 
@@ -200,7 +200,6 @@ void SSC::intensityCalibrationByCurvature(pcl::PointCloud<pcl::PointXYZI>::Ptr& 
         else{
             cloudIn_->points[id_correct[i]].intensity = pt.intensity / angleCos;
             apri_vec[id_correct[i]].intensity = cloudIn_->points[id_correct[i]].intensity;
-            // std::cout << apri_vec[i].intensity << " ";
         }
     }
 
@@ -253,10 +252,6 @@ void SSC::downSampleAndMakeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& c
         apri.range = dis;
         apri.angle = angle;
         apri.azimuth = azimuth;
-        if(apri.range_idx != -1 || apri.sector_idx != -1 || apri.azimuth_idx != -1 || apri.voxel_idx != -1){
-            ROS_WARN("pt %d can't generate apri", (int)i);
-            continue;
-        }
         apri.range_idx = std::ceil((dis - min_dis) / range_res) - 1;
         apri.sector_idx = std::ceil((angle - min_angle) / sector_res) - 1;
         apri.azimuth_idx = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
@@ -268,7 +263,7 @@ void SSC::downSampleAndMakeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& c
         apri_vec.emplace_back(apri);
     }
     if(apri_vec.size() != count){
-        ROS_WARN("not all pts can't turn to be a apri, please check");
+        ROS_WARN("not all pts can turn to be a apri, please check");
     }
     ROS_DEBUG("downsample and select: downsampled pointcloud size: %d", (int)cloud_down_->points.size());
 }
@@ -343,8 +338,11 @@ void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
             voxel.ptIdx.emplace_back(i);
             voxel.intensity_record.emplace_back(apri.intensity);
             voxel.intensity_av += apri.intensity;
-            float range_center = (apri.range_idx * 2 + 1) / 2 * range_res;
-            float sector_center = deg2rad((apri.sector_idx * 2 + 1) / 2 * sector_res);
+            voxel.range_idx = apri.range_idx;
+            voxel.sector_idx = apri.sector_idx;
+            voxel.azimuth_idx = apri.azimuth_idx;
+            float range_center = (apri.range_idx * 2 + 1) / 2 * range_res + min_dis;
+            float sector_center = deg2rad((apri.sector_idx * 2 + 1) / 2 * sector_res) + min_angle;
             float azimuth_center = deg2rad((apri.azimuth_idx * 2 + 1) / 2 * azimuth_res) + deg2rad(min_azimuth);
             voxel.center.x = range_center * std::cos(sector_center);
             voxel.center.y = range_center * std::sin(sector_center);
@@ -353,9 +351,8 @@ void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
             hash_cloud.insert(std::make_pair(apri.voxel_idx, voxel));
         }
     }
-    int count = 0;
+
     for(auto& vox : hash_cloud){
-        count += vox.second.ptIdx.size();
         vox.second.intensity_av /= vox.second.ptIdx.size();
         for(auto& in : vox.second.intensity_record){
             vox.second.intensity_cov += std::pow((in - vox.second.intensity_av), 2);   // /10, otherwise it's too large
@@ -375,3 +372,183 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr SSC::getVoxelCloudFromHashCloud(const std::
     return voxel_cloud;
 }
 
+void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::unordered_map<int, Voxel>& hash_cloud_){
+    int cluster_name = 4;
+    std::vector<int> clusterIdxs = std::vector<int>(apri_vec_.size(), -1);
+    std::cout << "apri_vec_: " << apri_vec_.size() << " hash_cloud_: " << hash_cloud_.size() << std::endl;
+
+    TicToc cluster_t("cluster");
+    for(int i = 0; i < apri_vec_.size(); i++){
+        PointAPRI apri = apri_vec_[i];
+        std::unordered_map<int, Voxel>::iterator it_find1;
+        std::unordered_map<int, Voxel>::iterator it_find2;
+        std::vector<int> neighbors;  // restore a lot of apri-neighbors idxs
+
+        it_find1 = hash_cloud_.find(apri.voxel_idx);
+        if(it_find1 != hash_cloud_.end()){
+            std::vector<int> neighbor = findVoxelNeighbors(apri.range_idx, apri.sector_idx, apri.azimuth_idx);   
+            for(int k = 0; k < neighbor.size(); k++){
+                it_find2 =  hash_cloud_.find(neighbor[k]);   
+                if(it_find2 != hash_cloud_.end()){
+                    addVec(neighbors, it_find2->second.ptIdx);
+                }
+            }
+        }
+
+        neighbors.swap(neighbors);
+        if(neighbors.size() > 0){
+            for(int n = 0; n < neighbors.size(); n++){
+                int oc = clusterIdxs[i];
+                int nc = clusterIdxs[neighbors[n]];
+
+                if(oc != -1 && nc != -1){
+                    if(oc != nc){
+                        mergeClusters(clusterIdxs, oc, nc);  // merge
+                    }
+                }
+                else{
+                    if(nc != -1){
+                        clusterIdxs[i] = nc;
+                    }
+                    else{
+                        if(oc != -1){
+                            clusterIdxs[neighbors[n]] = oc;
+                        }
+                    }
+                }    
+            }
+        }
+
+        if(clusterIdxs[i] == -1){
+            cluster_name ++;   //   a new class
+            clusterIdxs[i] = cluster_name;  // just encode the cluster name
+            for(int m = 0; m < neighbors.size(); m++){
+                clusterIdxs[neighbors[m]] = cluster_name;
+            }
+        }
+    }
+
+    std::vector<int> have;
+    for(auto& j : clusterIdxs){
+        if(!findNameInVec(j, have)){
+            have.emplace_back(j);
+        }
+    }
+    std::cout << "have: " << have.size() << std::endl;
+
+    std::unordered_map<int, std::vector<int>> cluster_pt;  // cluster name + pt id
+    std::unordered_map<int, std::vector<int>> cluster_vox;  // cluster name + voxel id
+    std::unordered_map<int, std::vector<int>>::iterator it_p;
+    std::unordered_map<int, std::vector<int>>::iterator it_v;
+    for(size_t i = 0; i < clusterIdxs.size(); i++){
+        it_p = cluster_pt.find(clusterIdxs[i]);
+        it_v = cluster_vox.find(clusterIdxs[i]);
+        if(it_p != cluster_pt.end()){
+            it_p->second.emplace_back(i);
+            it_v->second.emplace_back(apri_vec_[i].voxel_idx);
+        }
+        else{
+            std::vector<int> pt_vec;
+            std::vector<int> vox_vec;
+            pt_vec.emplace_back(i);
+            vox_vec.emplace_back(apri_vec_[i].voxel_idx);
+            cluster_pt.insert(std::make_pair(clusterIdxs[i], pt_vec));
+            cluster_vox.insert(std::make_pair(clusterIdxs[i], vox_vec));
+        }
+    }
+
+    std::cout << "cluster_pt: " << cluster_pt.size() << std::endl;
+
+    int pt_count = 0;
+    for(auto& c : cluster_pt){
+        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZI>());
+        cloud_cluster = getCloudByIdx(cloud_use, c.second);
+        if(!refineClusterByBoundingBox(cloud_cluster)){
+            continue;
+        }
+        else{
+            Cluster cluster;
+            cluster.occupy_pts = c.second;
+            cluster.occupy_voxels = cluster_vox[c.first];
+            cluster.cloud_observe.emplace_back(std::make_pair(id, cloud_cluster));
+            pcl::PointXYZI center = getCenterOfCloud(cloud_cluster);
+            cluster.cluster_center = center;
+            frame_ssc.cluster_set.emplace_back(cluster);
+            frame_ssc.center_cloud->points.push_back(center);
+            pt_count += c.second.size();
+        }
+    }
+
+    int final_clusterNum = frame_ssc.cluster_set.size();
+    std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
+    saveCloud(frame_ssc.center_cloud, save_path, 179, "_clusterCenter.pcd");
+    ROS_DEBUG("cluster and create frame: time_use(ms): %0.2f, cluster_num: %d, pt_num: %d", (float)cluster_t.toc(), final_clusterNum, pt_count);
+}
+
+std::vector<int> SSC::findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_){
+    std::vector<int> neighborIdxs;
+    int range_s = 1;
+    int sector_s = 1;
+    int azimuth_s = 1;
+    if(range_idx_ < range_num * correct_ratio * correct_ratio){  // it maybe take a longer time to search
+        range_s = 2;
+        sector_s = 2;
+    }
+    for(int x = range_idx_ - range_s; x <= range_idx_ + range_s; x++){
+        if(x > range_num -1 || x < 0) {continue;}
+        for(int y = sector_idx_ - sector_s; y <= sector_idx_ + sector_s; y++){
+            if(y > sector_num -1 || y < 0) {continue;}
+            for(int z = azimuth_idx_ - azimuth_s; z <= azimuth_idx_ + azimuth_s; z++){
+                if(z > azimuth_num - 1 || z < 0) {continue;}
+                neighborIdxs.emplace_back(x * sector_num + y + z * range_num * sector_num);  
+            }
+        }
+    }
+    return neighborIdxs;
+}
+
+void SSC::mergeClusters(std::vector<int>& clusterIdxs_, const int& idx1_, const int& idx2_){
+    for(int i = 0; i < clusterIdxs_.size(); i++){
+        if(clusterIdxs_[i] == idx1_){
+            clusterIdxs_[i] = idx2_;
+        }
+    }
+}
+
+pcl::PointCloud<pcl::PointXYZI>::Ptr SSC::getCloudByIdx(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_from_, const std::vector<int>& idx_vec_){
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZI>());
+    for(auto& idx : idx_vec_){
+        cloud_cluster->points.push_back(cloud_from_->points[idx]);
+    }
+    return cloud_cluster;
+}
+
+std::pair<pcl::PointXYZI, pcl::PointXYZI> SSC::getBoundingBoxOfCloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_){
+    pcl::PointXYZI point_min, point_max;
+    pcl::getMinMax3D(*cloud_, point_min, point_max);
+    return std::make_pair(point_min, point_max);
+}
+
+pcl::PointXYZI SSC::getCenterOfCloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_){
+    Eigen::Vector4f centroid;	
+    pcl::compute3DCentroid(*cloud_, centroid);
+    pcl::PointXYZI center;
+    center.x = centroid(0);
+    center.y = centroid(1);
+    center.z = centroid(2);
+    return center;
+}
+
+bool SSC::refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_cluster_){
+    std::pair<pcl::PointXYZI, pcl::PointXYZI> bounding_box = getBoundingBoxOfCloud(cloud_cluster_);
+    pcl::PointXYZI point_min = bounding_box.first;
+    if(pointDistance2d(point_min) < max_dis * max_dis_ratio){
+        return true;
+    }
+    if(point_min.z > (sensor_height + 0.5)){
+        return false;
+    }
+    else{
+        return true;
+    }
+}

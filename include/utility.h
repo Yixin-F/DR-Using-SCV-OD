@@ -104,6 +104,9 @@ struct PointAPRI{
 
 // voxel-type in hash cloud
 struct Voxel{
+    int range_idx;
+    int sector_idx;
+    int azimuth_idx;
     std::vector<int> ptIdx;  // the vector of id in noground cloud
     pcl::PointXYZI center;   // the point center's intensity is its id in voxel cloud
     std::vector<float> intensity_record;
@@ -133,18 +136,13 @@ struct Feature{
 
 // one cluster
 struct Cluster{
-    Cluster(){
-        allocateMemory();
-    }
+    Cluster() {}
     ~Cluster() {}
-    void allocateMemory(){
-        cluster.reset(new pcl::PointCloud<pcl::PointXYZI>());
-    }
     
     std::vector<int> occupy_pts;
     std::vector<int> occupy_voxels;
     std::string type = "";
-    pcl::PointCloud<pcl::PointXYZI>::Ptr cluster;
+    std::vector<std::pair<int, pcl::PointCloud<pcl::PointXYZI>::Ptr >> cloud_observe;
     pcl::PointXYZI cluster_center;
     std::vector<Feature> feature_set;
 };
@@ -159,9 +157,7 @@ struct Frame{
         center_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
 
-    float min_dis;
-    float max_dis;
-    std::vector<Cluster> cluster_set;
+    std::vector<Cluster> cluster_set;   // in the same order
     pcl::PointCloud<pcl::PointXYZI>::Ptr center_cloud;
 };
 
