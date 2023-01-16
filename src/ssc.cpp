@@ -482,13 +482,16 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
     ROS_DEBUG("cluster and create frame: time_use(ms): %0.2f, cluster_num: %d, pt_num: %d", (float)cluster_t.toc(), final_clusterNum, pt_count);
 }
 
-std::vector<int> SSC::findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_, const int& size_){
+std::vector<int> SSC::findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_, int size_){
+    if(range_idx_ <= range_num * correct_ratio * correct_ratio){
+        size_ += 1;
+    }
     std::vector<int> neighborIdxs;
     for(int x = range_idx_ - size_; x <= range_idx_ + size_; x++){
         if(x > range_num -1 || x < 0) {continue;}
         for(int y = sector_idx_ - size_; y <= sector_idx_ + size_; y++){
             if(y > sector_num -1 || y < 0) {continue;}
-            for(int z = azimuth_idx_ - size_; z <= azimuth_idx_ + size_; z++){
+            for(int z = azimuth_idx_ - 1; z <= azimuth_idx_ + 1; z++){
                 if(z > azimuth_num - 1 || z < 0) {continue;}
                 neighborIdxs.emplace_back(x * sector_num + y + z * range_num * sector_num);  
             }
@@ -645,16 +648,19 @@ void SSC::refineClusterByIntensity(Frame& frame_ssc){
         frame_ssc.cluster_set[fusion[0]].cluster_center = getCenterOfCloud(frame_ssc.cluster_set[fusion[0]].cloud_observe[0].second);
     }
 
-    for(auto& e : erase_id){  // erase
-        frame_ssc.cluster_set.erase(frame_ssc.cluster_set.begin() + e);
+    std::vector<Cluster> cluster_set_tmp;
+    for(int p = 0; p < frame_ssc.cluster_set.size(); p++){
+        if(!findNameInVec(p, erase_id)){
+            cluster_set_tmp.emplace_back(frame_ssc.cluster_set[p]);
+        }
     }
-    frame_ssc.cluster_set.swap(frame_ssc.cluster_set);
+    frame_ssc.cluster_set.swap(cluster_set_tmp);
 
     frame_ssc.center_cloud->clear();
     for(auto& c : frame_ssc.cluster_set){  // center cloud
         frame_ssc.center_cloud->points.push_back(c.cluster_center);
     }
-    std::cout << "erase_id: " << erase_id.size() << " frame_ssc.center_cloud->points : " << frame_ssc.center_cloud->points.size() << std::endl;
+    // std::cout << "erase_id: " << erase_id.size() << " frame_ssc.center_cloud->points : " << frame_ssc.center_cloud->points.size() << std::endl;
 
 }
 
