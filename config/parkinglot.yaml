@@ -46,19 +46,10 @@ ssc:
 
   toBeClass_: 10  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
-  fusion_ratio_: 0.3
-
   intensity_diff_: 6.0
   intensity_cov_: 4.0
-
-  curvature_diff_: 3.0
-  intensity_cov_: 1.5
-  vox_search_: 27  # the num of voxels ready to fusion
-  fusion_thre_: 0.6  # ratio
-  iterator_times_: 3  # reset it, if you need
   occupancy_: 0.6
 
-  height_: 0.6  # please reset the height boundary, refer to the height of your sensor
   building_: 0  # cluster map
   tree_: 1
   car_: 2

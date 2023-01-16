@@ -54,8 +54,14 @@ public:
     void refineClusterByIntensity(Frame& frame_ssc);
     void saveSegCloud(Frame& frame_ssc);
 
-    // tool
-    
+    // feature recognize
+    Feature getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
+    Feature getDescriptorByEnsembleShape(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
+    bool regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
+    Eigen::MatrixXd getElementFeature21(const Eigen::MatrixXd& eigenvalue_matrix_, const Eigen::MatrixXd& ensembleshape_matrix_);
+    float compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixXd& feature2_);
+
+    // dynamic detect
     float occupancyUseVoxel(const std::vector<int>& voxels1_, const std::vector<int>& voxels2_);
 
 

@@ -1,5 +1,14 @@
 #include "ssc.h"
 
+template<typename T>
+bool swap_if_gt(T& a, T& b) {
+    if (a > b) {
+    std::swap(a, b);
+    return true;
+  }
+  return false;
+}
+
 int SSC::id = 0;
 
 SSC::~SSC() {}
@@ -533,6 +542,7 @@ bool SSC::refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr&
     pcl::PointXYZI point_max = bounding_box.second;
     float diff_z = point_max.z - point_min.z;
     if(point_min.z > sensor_height / 2 || diff_z <= 0.2){
+    // if(point_max.z < 0 && diff_z <= 0.2){
         return false;
     }
     else{
@@ -673,3 +683,83 @@ void SSC::segment(){
 
     ROS_INFO("frame %d segment: time_use(ms): %0.2f, refined cluster_num: %d", id, (float)segment_t.toc(), (int)frame_ssc.cluster_set.size());
 }
+
+Feature SSC::getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_){
+    Eigen::Matrix3f covariance;	
+    Eigen::Vector4f centeroid;		
+    pcl::compute3DCentroid(*cluster_cloud_, centeroid);
+    pcl::computeCovarianceMatrix(*cluster_cloud_, centeroid, covariance);	
+
+    // eigen value
+    constexpr bool compute_eigenvectors = false;
+    Eigen::EigenSolver<Eigen::Matrix3f> eigenvalues_solver(covariance, compute_eigenvectors);
+    std::vector<float> eigenvalues(3, 0.0);
+    eigenvalues.at(0) = eigenvalues_solver.eigenvalues()[0].real();
+    eigenvalues.at(1) = eigenvalues_solver.eigenvalues()[1].real();
+    eigenvalues.at(2) = eigenvalues_solver.eigenvalues()[2].real();
+    if(eigenvalues_solver.eigenvalues()[0].imag() != 0.0 || eigenvalues_solver.eigenvalues()[1].imag() != 0.0 || eigenvalues_solver.eigenvalues()[2].imag() != 0.0 ){
+        ROS_WARN("Eigenvalues should not have non-zero imaginary component");;
+        ROS_BREAK();
+    }
+
+    swap_if_gt(eigenvalues.at(0), eigenvalues.at(1));  // sort
+    swap_if_gt(eigenvalues.at(0), eigenvalues.at(2));
+    swap_if_gt(eigenvalues.at(1), eigenvalues.at(2));
+
+    double sum_eigenvalues = eigenvalues.at(0) + eigenvalues.at(1) + eigenvalues.at(2);
+    double e1 = eigenvalues.at(0) / sum_eigenvalues;
+    double e2 = eigenvalues.at(1) / sum_eigenvalues;
+    double e3 = eigenvalues.at(2) / sum_eigenvalues;
+    const double sum_of_eigenvalues = e1 + e2 + e3;
+    if(e1 == e2 || e1 == e3 || e2 == e3 || e1 == 0.0 || sum_of_eigenvalues == 0.0){
+        ROS_WARN("Eigenvalues should not be equal and compute error");;
+        ROS_BREAK();
+    }
+
+    Feature eigenvalue_feature("eigenvalue");  // add 8 features 
+
+    double linearity = std::fabs((e1 - e2) / e1 / kLinearityMax);
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("linearity", linearity));
+    // std::cout << "linearity: " << linearity << std::endl;
+
+    double planarity = std::fabs((e2 - e3) / e1 / kPlanarityMax);
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("planarity", planarity));
+    // std::cout << "planarity: " << planarity << std::endl;
+
+    double scattering = std::fabs(e3 / e1 / kScatteringMax);
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("scattering", scattering));
+    // std::cout << "scattering: " << scattering << std::endl;
+
+    double omnivariance = std::fabs(std::pow(e1 * e2 * e3, kOneThird) / kOmnivarianceMax);
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("omnivariance", omnivariance));
+    // std::cout << "omnivariance: " << omnivariance << std::endl;
+
+    double anisotropy = std::fabs((e1 - e3) / e1 / kAnisotropyMax);
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("anisotropy", anisotropy));
+    // std::cout << "anisotropy: " << anisotropy << std::endl;
+
+    double eigen_entropy = std::fabs((e1 * std::log(e1)) + (e2 * std::log(e2)) + (e3 * std::log(e3)) / kEigenEntropyMax);
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("eigen_entropy",eigen_entropy));
+    // std::cout << "eigen_entropy: " << eigen_entropy << std::endl;
+
+    double change_of_curvature = std::fabs(e3 / sum_of_eigenvalues / kChangeOfCurvatureMax);
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("change_of_curvature", change_of_curvature));
+    // std::cout << "change_of_curvature: " << change_of_curvature << std::endl;
+
+    std::pair<pcl::PointXYZI, pcl::PointXYZI> bounding_box = getBoundingBoxOfCloud(cluster_cloud_);
+    pcl::PointXYZI point_min = bounding_box.first;
+    pcl::PointXYZI point_max = bounding_box.second;
+    double diff_x, diff_y, diff_z;
+    diff_x = point_max.x - point_min.x;
+    diff_y = point_max.y - point_min.y;
+    diff_z = point_max.z - point_min.z;
+    if(diff_z > diff_x && diff_z > diff_y){
+        eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 1));
+    }
+    else{
+        eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 0));
+    }
+
+
+}
+

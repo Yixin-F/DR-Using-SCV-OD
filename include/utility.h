@@ -159,8 +159,10 @@ struct Frame{
         center_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
 
-    std::vector<Cluster> cluster_set;   // in the same order
+    std::vector<Cluster> cluster_set;   // in the same order with center_cloud
     pcl::PointCloud<pcl::PointXYZI>::Ptr center_cloud;
+    std::vector<int> dynamic_c;  // id in cluster_set
+    std::vector<int> static_c;
 };
 
 namespace fs = std::filesystem; // file-process
@@ -206,16 +208,10 @@ public:
 
     int toBeClass;
     int search_c;
-
     float intensity_diff;
-    float curvature_diff;
     float intensity_cov;
-    float curvature_cov;
-    int vox_search;
-    float fusion_thre;
     float occupancy;
-    int iterator_times;
-    float height;
+
     int building;
     int tree;
     int car;
@@ -272,24 +268,15 @@ public:
         nh.param<float>("ssc/range_res_", range_res, 0.2);
         nh.param<float>("ssc/sector_res_", sector_res, 1.2);
         nh.param<float>("ssc/azimuth_res_", azimuth_res, 2.0);
-
         nh.param<float>("ssc/max_intensity_", max_intensity, 200.0);
         nh.param<float>("ssc/correct_radius_", correct_radius, 0.5);
         nh.param<float>("ssc/correct_ratio_", correct_ratio, 0.5);
         nh.param<int>("ssc/search_num_", search_num, 10);
-
         nh.param<int>("ssc/toBeClass_", toBeClass, 1);
         nh.param<int>("ssc/search_c_", search_c, 3);
-        
         nh.param<float>("ssc/intensity_diff_", intensity_diff, 50);
-        nh.param<float>("ssc/curvature_diff_", curvature_diff, 2.5);
         nh.param<float>("ssc/intensity_cov_", intensity_cov, 20);
-        nh.param<float>("ssc/curvature_cov_", curvature_cov, 1.5);
-        nh.param<int>("ssc/vox_search_", vox_search, 27);
-        nh.param<float>("ssc/fusion_thre_", fusion_thre, 0.4);
         nh.param<float>("ssc/occupancy_", occupancy, 0.6);
-        nh.param<float>("ssc/height_", height, 2.0);
-        nh.param<int>("ssc/iterator_times_", iterator_times, 3);
         nh.param<int>("ssc/building_", building, 0);
         nh.param<int>("ssc/tree_", tree, 1);
         nh.param<int>("ssc/car_", car, 2);
