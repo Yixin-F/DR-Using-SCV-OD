@@ -27,7 +27,7 @@ ssc:
   map_path_2_: "/ssc/02_session/semantic_map/"
 
   min_dis_add_:  1.0  # /m   use 0.0 for parkinglot dataset
-  max_dis_ratio_: 0.5 # ratio
+  max_dis_ratio_: 50.0  # ratio
 
   min_angle_: 0.0  # /deg
   max_angle_: 360.0
@@ -35,9 +35,9 @@ ssc:
   min_azimuth_: -30.0  # /deg
   max_azimuth_: 60.0
 
-  range_res_: 0.2
+  range_res_: 0.25
   sector_res_: 1.2
-  azimuth_res_: 2.4
+  azimuth_res_: 2.0
 
   max_intensity_: 200.0  # intenisty calibration
   correct_ratio_: 0.5
@@ -45,7 +45,7 @@ ssc:
   search_num_: 10
 
   toBeClass_: 10  # the min numbers of points to be one class
-  search_c_: 2  # > 1
+  search_c_: 2  # > 1, 2
   fusion_ratio_: 0.3
 
   intensity_diff_: 6.0

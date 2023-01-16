@@ -67,7 +67,7 @@ void SSC::getCloudInfo(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
     if(1){
         min_dis = min_dis_add;
     }
-    max_dis *= max_dis_ratio;
+    max_dis = max_dis_ratio;
 
     range_num = (int)std::ceil((max_dis - min_dis) / range_res);   // get ssc params
     sector_num = (int)std::ceil((max_angle - min_angle) / sector_res);
@@ -427,8 +427,6 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
         }
     }
 
-    std::cout <<"cluster_name :" << cluster_name << std::endl;
-
     std::unordered_map<int, std::vector<int>> cluster_pt;  // cluster name + pt id
     std::unordered_map<int, std::vector<int>> cluster_vox;  // cluster name + voxel id
     std::unordered_map<int, std::vector<int>>::iterator it_p;
@@ -483,15 +481,12 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
 }
 
 std::vector<int> SSC::findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_, int size_){
-    if(range_idx_ <= range_num * correct_ratio * correct_ratio){
-        size_ += 1;
-    }
     std::vector<int> neighborIdxs;
     for(int x = range_idx_ - size_; x <= range_idx_ + size_; x++){
         if(x > range_num -1 || x < 0) {continue;}
         for(int y = sector_idx_ - size_; y <= sector_idx_ + size_; y++){
             if(y > sector_num -1 || y < 0) {continue;}
-            for(int z = azimuth_idx_ - 1; z <= azimuth_idx_ + 1; z++){
+            for(int z = azimuth_idx_ - size_; z <= azimuth_idx_ + size_; z++){
                 if(z > azimuth_num - 1 || z < 0) {continue;}
                 neighborIdxs.emplace_back(x * sector_num + y + z * range_num * sector_num);  
             }
@@ -536,7 +531,8 @@ bool SSC::refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr&
     std::pair<pcl::PointXYZI, pcl::PointXYZI> bounding_box = getBoundingBoxOfCloud(cloud_cluster_);
     pcl::PointXYZI point_min = bounding_box.first;
     pcl::PointXYZI point_max = bounding_box.second;
-    if(point_min.z > sensor_height / 2 || point_max.z < (- sensor_height)){
+    float diff_z = point_max.z - point_min.z;
+    if(point_min.z > sensor_height / 2 || diff_z <= 0.2){
         return false;
     }
     else{
