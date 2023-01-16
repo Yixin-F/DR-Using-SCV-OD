@@ -14,8 +14,7 @@ int main(int argc, char** argv){
 
     ssc.process(test);
 
-    ssc.clusterAndCreateFrame(ssc.apri_vec, ssc.hash_cloud);
-    ssc.saveSegCloud(ssc.frame_ssc);
+    ssc.segment();
 
     ros::spin();
 

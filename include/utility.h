@@ -107,6 +107,7 @@ struct Voxel{
     int range_idx;
     int sector_idx;
     int azimuth_idx;
+    int label = -1;
     std::vector<int> ptIdx;  // the vector of id in noground cloud
     pcl::PointXYZI center;   // the point center's intensity is its id in voxel cloud
     std::vector<float> intensity_record;
@@ -139,10 +140,11 @@ struct Cluster{
     Cluster() {}
     ~Cluster() {}
     
+    int type;
+    int color[3];
     std::vector<int> occupy_pts;
     std::vector<int> occupy_voxels;
-    std::string type = "";
-    std::vector<std::pair<int, pcl::PointCloud<pcl::PointXYZI>::Ptr >> cloud_observe;
+    std::vector<std::pair<int, pcl::PointCloud<pcl::PointXYZI>::Ptr>> cloud_observe;
     pcl::PointXYZI cluster_center;
     std::vector<Feature> feature_set;
 };
@@ -157,7 +159,6 @@ struct Frame{
         center_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
 
-    std::vector<std::vector<int>> cluster_color;
     std::vector<Cluster> cluster_set;   // in the same order
     pcl::PointCloud<pcl::PointXYZI>::Ptr center_cloud;
 };
@@ -204,6 +205,8 @@ public:
     int search_num;
 
     int toBeClass;
+    int search_c;
+
     float intensity_diff;
     float curvature_diff;
     float intensity_cov;
@@ -276,6 +279,8 @@ public:
         nh.param<int>("ssc/search_num_", search_num, 10);
 
         nh.param<int>("ssc/toBeClass_", toBeClass, 1);
+        nh.param<int>("ssc/search_c_", search_c, 3);
+        
         nh.param<float>("ssc/intensity_diff_", intensity_diff, 50);
         nh.param<float>("ssc/curvature_diff_", curvature_diff, 2.5);
         nh.param<float>("ssc/intensity_cov_", intensity_cov, 20);
@@ -399,7 +404,7 @@ public:
             if(cloud_->points.size() == 0 || pcl::io::savePCDFile(save_path, *cloud_) == -1){
                 ROS_WARN("%s save error ", (std::to_string(id) + name_).c_str());
             }
-            ROS_DEBUG("cloud save: %s save success, pt_num %d", save_path.c_str(), (int)cloud_->points.size());
+            ROS_DEBUG("cloud save: %s save success, pt_num: %d", save_path.c_str(), (int)cloud_->points.size());
         }
     }
 
@@ -436,6 +441,18 @@ public:
         else{
             return false;
         }
+    }
+    
+    bool findNameInVec(const std::vector<int>& vec1_, const std::vector<int>& vec2_){
+        for(auto& i : vec2_){
+            if(findNameInVec(i, vec1_)){
+                return true;
+            }
+            else{
+                continue;
+            }
+        }
+        return false;
     }
 
     Eigen::MatrixXd turnVec2Matrix(const std::vector<FeatureValue>& vec_){

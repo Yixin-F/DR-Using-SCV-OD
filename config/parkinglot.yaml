@@ -27,7 +27,7 @@ ssc:
   map_path_2_: "/ssc/02_session/semantic_map/"
 
   min_dis_add_:  1.0  # /m   use 0.0 for parkinglot dataset
-  max_dis_ratio_: 0.5 # ratio
+  max_dis_ratio_: 0.4 # ratio
 
   min_angle_: 0.0  # /deg
   max_angle_: 360.0
@@ -39,14 +39,18 @@ ssc:
   sector_res_: 1.0
   azimuth_res_: 2.0
 
-  max_intensity_: 200.0
+  max_intensity_: 200.0  # intenisty calibration
   correct_ratio_: 0.5
   correct_radius_: 0.3
   search_num_: 10
 
   toBeClass_: 10  # the min numbers of points to be one class
-  intensity_diff_: 30.0
-  intensity_cov_: 10.0
+  search_c_: 3  # > 1
+  fusion_ratio_: 0.3
+
+  intensity_diff_: 2.0
+  intensity_cov_: 4.0
+
   curvature_diff_: 3.0
   intensity_cov_: 1.5
   vox_search_: 27  # the num of voxels ready to fusion

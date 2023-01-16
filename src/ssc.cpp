@@ -17,6 +17,7 @@ SSC::SSC(){
 void SSC::allocateMemory(){
     PatchworkGroundSeg.reset(new PatchWork<pcl::PointXYZI>());
     cloud_use.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    cloud_vox.reset(new pcl::PointCloud<pcl::PointXYZI>());
 }
 
 void SSC::reset(){
@@ -35,6 +36,7 @@ void SSC::reset(){
     hash_cloud.clear();
 
     cloud_use->clear();
+    cloud_vox->clear();
 }
 
 void SSC::getCloudInfo(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
@@ -362,14 +364,12 @@ void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
     }
 }
 
-pcl::PointCloud<pcl::PointXYZI>::Ptr SSC::getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_){
-    pcl::PointCloud<pcl::PointXYZI>::Ptr voxel_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+void SSC::getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_){
     for(auto& vox : hashCloud_){
-        voxel_cloud->points.push_back(vox.second.center);
+        cloud_vox->points.push_back(vox.second.center);
     }
     std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
-    saveCloud(voxel_cloud, save_path, 179, "_vox.pcd");
-    return voxel_cloud;
+    saveCloud(cloud_vox, save_path, 179, "_vox.pcd");
 }
 
 void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::unordered_map<int, Voxel>& hash_cloud_){
@@ -385,7 +385,7 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
 
         it_find1 = hash_cloud_.find(apri.voxel_idx);
         if(it_find1 != hash_cloud_.end()){
-            std::vector<int> neighbor = findVoxelNeighbors(apri.range_idx, apri.sector_idx, apri.azimuth_idx);   
+            std::vector<int> neighbor = findVoxelNeighbors(apri.range_idx, apri.sector_idx, apri.azimuth_idx, 1);   
             for(int k = 0; k < neighbor.size(); k++){
                 it_find2 =  hash_cloud_.find(neighbor[k]);   
                 if(it_find2 != hash_cloud_.end()){
@@ -426,6 +426,8 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
             }
         }
     }
+
+    std::cout <<"cluster_name :" << cluster_name << std::endl;
 
     std::unordered_map<int, std::vector<int>> cluster_pt;  // cluster name + pt id
     std::unordered_map<int, std::vector<int>> cluster_vox;  // cluster name + voxel id
@@ -469,18 +471,24 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
     }
 
     int final_clusterNum = frame_ssc.cluster_set.size();
+    for(int j = 0; j < final_clusterNum; j++){
+        for(auto& v : frame_ssc.cluster_set[j].occupy_voxels){
+            hash_cloud[v].label = j;
+        }
+    }
+
     std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
     saveCloud(frame_ssc.center_cloud, save_path, 179, "_clusterCenter.pcd");
     ROS_DEBUG("cluster and create frame: time_use(ms): %0.2f, cluster_num: %d, pt_num: %d", (float)cluster_t.toc(), final_clusterNum, pt_count);
 }
 
-std::vector<int> SSC::findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_){
+std::vector<int> SSC::findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_, const int& size_){
     std::vector<int> neighborIdxs;
-    for(int x = range_idx_ - 1; x <= range_idx_ + 1; x++){
+    for(int x = range_idx_ - size_; x <= range_idx_ + size_; x++){
         if(x > range_num -1 || x < 0) {continue;}
-        for(int y = sector_idx_ - 1; y <= sector_idx_ + 1; y++){
+        for(int y = sector_idx_ - size_; y <= sector_idx_ + size_; y++){
             if(y > sector_num -1 || y < 0) {continue;}
-            for(int z = azimuth_idx_ - 1; z <= azimuth_idx_ + 1; z++){
+            for(int z = azimuth_idx_ - size_; z <= azimuth_idx_ + size_; z++){
                 if(z > azimuth_num - 1 || z < 0) {continue;}
                 neighborIdxs.emplace_back(x * sector_num + y + z * range_num * sector_num);  
             }
@@ -538,7 +546,7 @@ bool SSC::refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr&
     }
 }
 
-void SSC::saveSegCloud(const Frame& frame_ssc){
+void SSC::saveSegCloud(Frame& frame_ssc){
     cv::RNG rng(12345);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
     rgb_ptr->height = 1;
@@ -560,8 +568,106 @@ void SSC::saveSegCloud(const Frame& frame_ssc){
             rgb_ptr->points.push_back(pt_rgb);
             count ++;
         }
+        c.color[0] = r;
+        c.color[1] = g;
+        c.color[2] = b;
     }
     rgb_ptr->width = count;
     std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
     saveCloud(rgb_ptr, save_path, 179, "_seg.pcd");
+}
+
+void SSC::refineClusterByIntensity(Frame& frame_ssc){
+    std::vector<std::vector<int>> fusion_set;
+    for(int i = 0; i < frame_ssc.cluster_set.size(); i++){
+        std::vector<int> voxel_c = frame_ssc.cluster_set[i].occupy_voxels;
+        std::vector<int> candidate_c;
+        for(auto& v: voxel_c){
+            std::vector<int> candidate;
+            std::unordered_map<int, Voxel>::iterator it_find; 
+            std::vector<int> vox = findVoxelNeighbors(hash_cloud[v].range_idx, hash_cloud[v].sector_idx, hash_cloud[v].azimuth_idx, search_c);
+            for(auto& n : vox){
+                it_find = hash_cloud.find(n);
+                if(it_find != hash_cloud.end() && hash_cloud[n].intensity_cov <= intensity_cov && std::fabs(hash_cloud[v].intensity_av - hash_cloud[n].intensity_av) <= intensity_diff){
+                    if(it_find->second.label != -1){
+                        candidate.emplace_back(it_find->second.label);
+                    }
+                }
+            }
+            addVec(candidate_c, candidate);
+        }
+        sampleVec(candidate_c);
+        if(candidate_c.size() >= 2){
+            fusion_set.emplace_back(candidate_c);
+        }
+    }
+
+    std::vector<std::vector<int>> fusion_set_tmp;
+    std::vector<int> invalid_id;
+    for(int k = 0; k < fusion_set.size(); k++){
+        if(findNameInVec(k, invalid_id)){
+            continue;
+        }
+        std::vector<int> set = fusion_set[k];
+        for(int j = k; j < fusion_set.size(); j++){
+            if(findNameInVec(set, fusion_set[j])){
+                addVec(set, fusion_set[j]);
+                invalid_id.emplace_back(j);
+            }
+            else{
+                continue;
+            }
+        }
+        sampleVec(set);
+        std::sort(set.begin(), set.end());
+        fusion_set_tmp.emplace_back(set);
+    }
+    fusion_set.swap(fusion_set_tmp);
+
+    // // test
+    // std::cout << "fusion_set: " << fusion_set.size() << std::endl;
+    // for(auto& fusion : fusion_set){
+    //     for(auto& f : fusion){
+    //         std::cout << f << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+    
+    // update
+    std::vector<int> erase_id;
+    for(auto& fusion : fusion_set){
+        for(int c = 1; c < fusion.size(); c++){
+            addVec(frame_ssc.cluster_set[fusion[0]].occupy_pts, frame_ssc.cluster_set[fusion[c]].occupy_pts);
+            addVec(frame_ssc.cluster_set[fusion[0]].occupy_voxels, frame_ssc.cluster_set[fusion[c]].occupy_voxels);
+            *frame_ssc.cluster_set[fusion[0]].cloud_observe[0].second += *frame_ssc.cluster_set[fusion[c]].cloud_observe[0].second;
+            erase_id.emplace_back(fusion[c]);
+        }
+        frame_ssc.cluster_set[fusion[0]].cluster_center = getCenterOfCloud(frame_ssc.cluster_set[fusion[0]].cloud_observe[0].second);
+    }
+
+    for(auto& e : erase_id){  // erase
+        frame_ssc.cluster_set.erase(frame_ssc.cluster_set.begin() + e);
+    }
+    frame_ssc.cluster_set.swap(frame_ssc.cluster_set);
+
+    frame_ssc.center_cloud->clear();
+    for(auto& c : frame_ssc.cluster_set){  // center cloud
+        frame_ssc.center_cloud->points.push_back(c.cluster_center);
+    }
+    std::cout << "erase_id: " << erase_id.size() << " frame_ssc.center_cloud->points : " << frame_ssc.center_cloud->points.size() << std::endl;
+
+}
+
+void SSC::segment(){
+    TicToc segment_t("segment");
+    // cvc
+    clusterAndCreateFrame(apri_vec, hash_cloud);
+
+    // intensity compensate
+    refineClusterByIntensity(frame_ssc);
+
+    // save segment cloud
+    saveSegCloud(frame_ssc);
+
+    ROS_INFO("frame %d segment: time_use(ms): %0.2f, refined cluster_num: %d", id, (float)segment_t.toc(), (int)frame_ssc.cluster_set.size());
 }
