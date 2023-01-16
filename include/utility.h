@@ -157,6 +157,7 @@ struct Frame{
         center_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
 
+    std::vector<std::vector<int>> cluster_color;
     std::vector<Cluster> cluster_set;   // in the same order
     pcl::PointCloud<pcl::PointXYZI>::Ptr center_cloud;
 };

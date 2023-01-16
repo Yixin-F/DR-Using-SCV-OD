@@ -57,7 +57,7 @@ void SSC::getCloudInfo(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
             max_z = pt_z;
         }
     }
-    sensor_height = std::fabs(min_z) - 0.5;
+    sensor_height = std::fabs(min_z) - 0.2;
     // if(min_dis <= min_dis_add){
     //     min_dis = min_dis_add;
     // }
@@ -265,7 +265,7 @@ void SSC::downSampleAndMakeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& c
     if(apri_vec.size() != count){
         ROS_WARN("not all pts can turn to be a apri, please check");
     }
-    ROS_DEBUG("downsample and select: downsampled pointcloud size: %d", (int)cloud_down_->points.size());
+    // ROS_DEBUG("downsample and select: downsampled pointcloud size: %d", (int)cloud_down_->points.size());
 }
 
 void SSC::intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_){
@@ -375,7 +375,6 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr SSC::getVoxelCloudFromHashCloud(const std::
 void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::unordered_map<int, Voxel>& hash_cloud_){
     int cluster_name = 4;
     std::vector<int> clusterIdxs = std::vector<int>(apri_vec_.size(), -1);
-    std::cout << "apri_vec_: " << apri_vec_.size() << " hash_cloud_: " << hash_cloud_.size() << std::endl;
 
     TicToc cluster_t("cluster");
     for(int i = 0; i < apri_vec_.size(); i++){
@@ -428,14 +427,6 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
         }
     }
 
-    std::vector<int> have;
-    for(auto& j : clusterIdxs){
-        if(!findNameInVec(j, have)){
-            have.emplace_back(j);
-        }
-    }
-    std::cout << "have: " << have.size() << std::endl;
-
     std::unordered_map<int, std::vector<int>> cluster_pt;  // cluster name + pt id
     std::unordered_map<int, std::vector<int>> cluster_vox;  // cluster name + voxel id
     std::unordered_map<int, std::vector<int>>::iterator it_p;
@@ -456,8 +447,6 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
             cluster_vox.insert(std::make_pair(clusterIdxs[i], vox_vec));
         }
     }
-
-    std::cout << "cluster_pt: " << cluster_pt.size() << std::endl;
 
     int pt_count = 0;
     for(auto& c : cluster_pt){
@@ -487,18 +476,11 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
 
 std::vector<int> SSC::findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_){
     std::vector<int> neighborIdxs;
-    int range_s = 1;
-    int sector_s = 1;
-    int azimuth_s = 1;
-    if(range_idx_ < range_num * correct_ratio * correct_ratio){  // it maybe take a longer time to search
-        range_s = 2;
-        sector_s = 2;
-    }
-    for(int x = range_idx_ - range_s; x <= range_idx_ + range_s; x++){
+    for(int x = range_idx_ - 1; x <= range_idx_ + 1; x++){
         if(x > range_num -1 || x < 0) {continue;}
-        for(int y = sector_idx_ - sector_s; y <= sector_idx_ + sector_s; y++){
+        for(int y = sector_idx_ - 1; y <= sector_idx_ + 1; y++){
             if(y > sector_num -1 || y < 0) {continue;}
-            for(int z = azimuth_idx_ - azimuth_s; z <= azimuth_idx_ + azimuth_s; z++){
+            for(int z = azimuth_idx_ - 1; z <= azimuth_idx_ + 1; z++){
                 if(z > azimuth_num - 1 || z < 0) {continue;}
                 neighborIdxs.emplace_back(x * sector_num + y + z * range_num * sector_num);  
             }
@@ -542,13 +524,44 @@ pcl::PointXYZI SSC::getCenterOfCloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr&
 bool SSC::refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_cluster_){
     std::pair<pcl::PointXYZI, pcl::PointXYZI> bounding_box = getBoundingBoxOfCloud(cloud_cluster_);
     pcl::PointXYZI point_min = bounding_box.first;
-    if(pointDistance2d(point_min) < max_dis * max_dis_ratio){
-        return true;
-    }
-    if(point_min.z > (sensor_height + 0.5)){
+    pcl::PointXYZI point_max = bounding_box.second;
+    if(point_min.z > sensor_height / 2 || point_max.z < (- sensor_height)){
         return false;
     }
     else{
-        return true;
+        if(point_min.z < (- sensor_height) || cloud_cluster_->points.size() >=toBeClass){
+            return true;
+        }
+        else{
+            return false;
+        }
     }
+}
+
+void SSC::saveSegCloud(const Frame& frame_ssc){
+    cv::RNG rng(12345);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
+    rgb_ptr->height = 1;
+    int count = 0;
+    for(auto& c : frame_ssc.cluster_set){
+        int r, g, b;
+        r = rng.uniform(20, 150);   // random get rgb
+        g = rng.uniform(20, 200); 
+        b = rng.uniform(20, 200); 
+        for(size_t i = 0; i < c.occupy_pts.size(); i++){
+            pcl::PointXYZRGB pt_rgb;
+            pcl::PointXYZI pt = cloud_use->points[c.occupy_pts[i]];
+            pt_rgb.x = pt.x;
+            pt_rgb.y = pt.y;
+            pt_rgb.z = pt.z;
+            pt_rgb.r = r;
+            pt_rgb.g = g;
+            pt_rgb.b = b;
+            rgb_ptr->points.push_back(pt_rgb);
+            count ++;
+        }
+    }
+    rgb_ptr->width = count;
+    std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
+    saveCloud(rgb_ptr, save_path, 179, "_seg.pcd");
 }

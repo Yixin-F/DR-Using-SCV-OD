@@ -68,6 +68,7 @@
         "csignal": "cpp",
         "mutex": "cpp",
         "system_error": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "forward_list": "cpp"
     }
 }

@@ -14,8 +14,8 @@ int main(int argc, char** argv){
 
     ssc.process(test);
 
-    std::cout << "ssc.apri_vec: " << ssc.apri_vec.size() << " ssc.hash_cloud: " << ssc.hash_cloud.size() << std::endl;
     ssc.clusterAndCreateFrame(ssc.apri_vec, ssc.hash_cloud);
+    ssc.saveSegCloud(ssc.frame_ssc);
 
     ros::spin();
 
