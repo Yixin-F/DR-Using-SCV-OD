@@ -16,6 +16,8 @@ int main(int argc, char** argv){
 
     ssc.segment();
 
+    ssc.recognize();
+
     ros::spin();
 
     return 0;

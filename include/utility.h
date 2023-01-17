@@ -140,13 +140,14 @@ struct Cluster{
     Cluster() {}
     ~Cluster() {}
     
-    int type;
+    int type = -1;
     int color[3];
     std::vector<int> occupy_pts;
     std::vector<int> occupy_voxels;
-    std::vector<std::pair<int, pcl::PointCloud<pcl::PointXYZI>::Ptr>> cloud_observe;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud;
+    std::vector<std::pair<int, int>> cloud_observe;  // <frame_id, cluster_id in this frame>
     pcl::PointXYZI cluster_center;
-    std::vector<Feature> feature_set;
+    Eigen::MatrixXd feature_matrix;
 };
 
 // one frame

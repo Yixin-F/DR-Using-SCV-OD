@@ -458,6 +458,7 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
     }
 
     int pt_count = 0;
+    int count = 0;
     for(auto& c : cluster_pt){
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZI>());
         cloud_cluster = getCloudByIdx(cloud_use, c.second);
@@ -468,7 +469,9 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
             Cluster cluster;
             cluster.occupy_pts = c.second;
             cluster.occupy_voxels = cluster_vox[c.first];
-            cluster.cloud_observe.emplace_back(std::make_pair(id, cloud_cluster));
+            cluster.cloud = cloud_cluster;
+            cluster.cloud_observe.emplace_back(std::make_pair(id, count));
+            count ++;
             pcl::PointXYZI center = getCenterOfCloud(cloud_cluster);
             cluster.cluster_center = center;
             frame_ssc.cluster_set.emplace_back(cluster);
@@ -541,7 +544,7 @@ bool SSC::refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr&
     pcl::PointXYZI point_min = bounding_box.first;
     pcl::PointXYZI point_max = bounding_box.second;
     float diff_z = point_max.z - point_min.z;
-    if(point_min.z > sensor_height / 2 || diff_z <= 0.2){
+    if(point_min.z > sensor_height / 3 || diff_z <= 0.2){
     // if(point_max.z < 0 && diff_z <= 0.2){
         return false;
     }
@@ -562,9 +565,34 @@ void SSC::saveSegCloud(Frame& frame_ssc){
     int count = 0;
     for(auto& c : frame_ssc.cluster_set){
         int r, g, b;
-        r = rng.uniform(20, 150);   // random get rgb
-        g = rng.uniform(20, 200); 
-        b = rng.uniform(20, 200); 
+        if(c.type == -1){
+            r = rng.uniform(20, 150);   // random get rgb
+            g = rng.uniform(20, 200); 
+            b = rng.uniform(20, 200); 
+        }
+        else{
+            if(c.type == building){
+                r = 255.f;
+                g = 255.f;
+                b = 255.f;
+            }
+            else if(c.type == tree){
+                r = 0.f;
+                g = 255.f;
+                b = 0.f;
+            }
+            else if(c.type == car){
+                r = 0.f;
+                g = 0.f;
+                b = 255.f;
+            }
+            else if(c.type == other){
+                r = 255.f;
+                g = 255.f;
+                b = 0.f;
+            }
+        }
+        
         for(size_t i = 0; i < c.occupy_pts.size(); i++){
             pcl::PointXYZRGB pt_rgb;
             pcl::PointXYZI pt = cloud_use->points[c.occupy_pts[i]];
@@ -648,10 +676,10 @@ void SSC::refineClusterByIntensity(Frame& frame_ssc){
         for(int c = 1; c < fusion.size(); c++){
             addVec(frame_ssc.cluster_set[fusion[0]].occupy_pts, frame_ssc.cluster_set[fusion[c]].occupy_pts);
             addVec(frame_ssc.cluster_set[fusion[0]].occupy_voxels, frame_ssc.cluster_set[fusion[c]].occupy_voxels);
-            *frame_ssc.cluster_set[fusion[0]].cloud_observe[0].second += *frame_ssc.cluster_set[fusion[c]].cloud_observe[0].second;
+            *frame_ssc.cluster_set[fusion[0]].cloud += *frame_ssc.cluster_set[fusion[c]].cloud;
             erase_id.emplace_back(fusion[c]);
         }
-        frame_ssc.cluster_set[fusion[0]].cluster_center = getCenterOfCloud(frame_ssc.cluster_set[fusion[0]].cloud_observe[0].second);
+        frame_ssc.cluster_set[fusion[0]].cluster_center = getCenterOfCloud(frame_ssc.cluster_set[fusion[0]].cloud);
     }
 
     std::vector<Cluster> cluster_set_tmp;
@@ -666,8 +694,6 @@ void SSC::refineClusterByIntensity(Frame& frame_ssc){
     for(auto& c : frame_ssc.cluster_set){  // center cloud
         frame_ssc.center_cloud->points.push_back(c.cluster_center);
     }
-    // std::cout << "erase_id: " << erase_id.size() << " frame_ssc.center_cloud->points : " << frame_ssc.center_cloud->points.size() << std::endl;
-
 }
 
 void SSC::segment(){
@@ -678,8 +704,8 @@ void SSC::segment(){
     // intensity compensate
     refineClusterByIntensity(frame_ssc);
 
-    // save segment cloud
-    saveSegCloud(frame_ssc);
+    // // save segment cloud
+    // saveSegCloud(frame_ssc);
 
     ROS_INFO("frame %d segment: time_use(ms): %0.2f, refined cluster_num: %d", id, (float)segment_t.toc(), (int)frame_ssc.cluster_set.size());
 }
@@ -711,10 +737,6 @@ Feature SSC::getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Pt
     double e2 = eigenvalues.at(1) / sum_eigenvalues;
     double e3 = eigenvalues.at(2) / sum_eigenvalues;
     const double sum_of_eigenvalues = e1 + e2 + e3;
-    if(e1 == e2 || e1 == e3 || e2 == e3 || e1 == 0.0 || sum_of_eigenvalues == 0.0){
-        ROS_WARN("Eigenvalues should not be equal and compute error");;
-        ROS_BREAK();
-    }
 
     Feature eigenvalue_feature("eigenvalue");  // add 8 features 
 
@@ -753,13 +775,108 @@ Feature SSC::getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Pt
     diff_x = point_max.x - point_min.x;
     diff_y = point_max.y - point_min.y;
     diff_z = point_max.z - point_min.z;
-    if(diff_z > diff_x && diff_z > diff_y){
+    if(diff_z > diff_x || diff_z > diff_y){
         eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 1));
     }
     else{
         eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 0));
     }
 
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("max_z", point_max.z));
 
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("type", -1));
+
+    if(eigenvalue_feature.feature_values.size() != 10){
+        ROS_WARN("get descriptor by eigen value error");
+        ROS_BREAK();
+    }
+    return eigenvalue_feature;
 }
+
+Feature SSC::getDescriptorByEnsembleShape(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_){
+    pcl::ESFEstimation<pcl::PointXYZI, pcl::ESFSignature640> esf_estimator_;
+    pcl::PointCloud<pcl::ESFSignature640>::Ptr signature(new pcl::PointCloud<pcl::ESFSignature640>);
+    esf_estimator_.setInputCloud(cluster_cloud_);
+    esf_estimator_.compute(*signature);
+    if(signature->size() != 1){
+        ROS_WARN("esf_estimator use wrong");;
+        ROS_BREAK();
+    }
+
+    Feature ensembleshape_feature("ensemble_shape");
+    const int bin_size = 64;
+    const int dim = 10;
+    double histogram[dim];
+    for(int i = 0; i < 640; i++){
+        histogram[i % 10] += signature->points[0].histogram[i];
+    }
+    for(int h = 0; h < dim; h++){
+        ensembleshape_feature.feature_values.emplace_back(FeatureValue("esf_" + std::to_string(h), histogram[h]));
+    }
+    if(ensembleshape_feature.feature_values.size() != dim){
+        ROS_WARN("ensembleshape_feature_matrix calculate error");
+        ROS_BREAK();
+    }
+
+    return ensembleshape_feature;
+}
+
+Eigen::MatrixXd SSC::getFeature20(const Eigen::MatrixXd& eigenvalue_matrix_, const Eigen::MatrixXd& ensembleshape_matrix_){
+    Eigen::MatrixXd f_20;
+    f_20.setZero();
+    f_20.resize(1, 20);
+    f_20.block(0, 0, 1, 10) = eigenvalue_matrix_;
+    f_20.block(0, 10, 1, 10) = ensembleshape_matrix_;
+    return f_20;
+}
+
+void SSC::recognize(){
+    TicToc recognize_t("recognize");
+    const double linearity_th = 0.01;
+    const double planarity_th = 0.1;
+    const double height = 2.f;
+    int highDynamic = 0;
+    for(auto& c : frame_ssc.cluster_set){
+        Feature eigen_f = getDescriptorByEigenValue(c.cloud);
+        Eigen::MatrixXd eigen_f_10 = turnVec2Matrix(eigen_f.feature_values);
+        // Feature ensemble_f = getDescriptorByEnsembleShape(c.cloud);
+        // Eigen::MatrixXd ensemble_f_10 = turnVec2Matrix(ensemble_f.feature_values);
+        // Eigen::MatrixXd f_20 = getFeature20(eigen_f_10, ensemble_f_10);
+        Eigen::MatrixXd f_10 = eigen_f_10;
+        
+        if(f_10(0, 1) >= planarity_th && f_10(0, 8) > height){  // linearity && planarity && height
+            f_10(0, 9) = building;  // type
+            c.type = building;
+            c.feature_matrix = f_10;
+        }
+        else{
+            if(f_10(0, 7) == 0 && f_10(0, 8) <= height){
+                f_10(0, 9) == car;
+                c.type = car;
+                c.feature_matrix = f_10;
+                highDynamic ++;
+            }
+            else{
+                if(f_10(0, 1) < planarity_th && f_10(0, 8) > height){
+                    f_10(0, 9) == tree;
+                    c.type = tree;
+                    c.feature_matrix = f_10;
+                }
+                else{
+                    f_10(0, 9) == other;
+                    c.type = other;
+                    c.feature_matrix = f_10;
+                    highDynamic ++;
+                }
+            }
+        }
+        std::cout << "feature_matrix: " << c.feature_matrix << std::endl;
+    }
+
+    // save 
+    saveSegCloud(frame_ssc);
+    ROS_DEBUG("recognize info: time_use(ms): %0.2f, high dynamic num: %d", (float)recognize_t.toc(), highDynamic);
+}
+
+
 
