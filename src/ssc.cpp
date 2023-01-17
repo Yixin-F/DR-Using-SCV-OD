@@ -26,7 +26,6 @@ SSC::SSC(){
 void SSC::allocateMemory(){
     PatchworkGroundSeg.reset(new PatchWork<pcl::PointXYZI>());
     cloud_use.reset(new pcl::PointCloud<pcl::PointXYZI>());
-    cloud_vox.reset(new pcl::PointCloud<pcl::PointXYZI>());
 }
 
 void SSC::reset(){
@@ -45,10 +44,10 @@ void SSC::reset(){
     hash_cloud.clear();
 
     cloud_use->clear();
-    cloud_vox->clear();
 }
 
 void SSC::getCloudInfo(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
+    frame_ssc.id = id;
     float min_z = 999999.f;
     float max_z = -999999.f;
     for(size_t i = 0; i < cloudIn_->points.size(); i++){
@@ -331,7 +330,7 @@ void SSC::process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
     // get voxel cloud
     getVoxelCloudFromHashCloud(hash_cloud);
 
-    ROS_DEBUG("pre-process: time_use(ms): %0.2f, valid pointcloud size: %d, apri_vec size: %d, hash_cloud size: %d", (float)process_t.toc(), (int)cloud_use->points.size(), (int)apri_vec.size(), (int)hash_cloud.size());
+    ROS_INFO("pre-process: time_use(ms): %0.2f, valid pointcloud size: %d, apri_vec size: %d, hash_cloud size: %d", (float)process_t.toc(), (int)cloud_use->points.size(), (int)apri_vec.size(), (int)hash_cloud.size());
 }
 
 void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
@@ -375,10 +374,10 @@ void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
 
 void SSC::getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_){
     for(auto& vox : hashCloud_){
-        cloud_vox->points.push_back(vox.second.center);
+        frame_ssc.vox_cloud->points.push_back(vox.second.center);
     }
     std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
-    saveCloud(cloud_vox, save_path, 179, "_vox.pcd");
+    saveCloud(frame_ssc.vox_cloud, save_path, 179, "_vox.pcd");
 }
 
 void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::unordered_map<int, Voxel>& hash_cloud_){
@@ -565,29 +564,19 @@ void SSC::saveSegCloud(Frame& frame_ssc){
     int count = 0;
     for(auto& c : frame_ssc.cluster_set){
         int r, g, b;
-        if(c.type == -1){
+        if(c.type == -1 || c.type == car || c.type == other){
             r = rng.uniform(20, 150);   // random get rgb
             g = rng.uniform(20, 200); 
             b = rng.uniform(20, 200); 
         }
         else{
             if(c.type == building){
-                r = 255.f;
-                g = 255.f;
-                b = 255.f;
-            }
-            else if(c.type == tree){
-                r = 0.f;
-                g = 255.f;
-                b = 0.f;
-            }
-            else if(c.type == car){
                 r = 0.f;
                 g = 0.f;
                 b = 255.f;
             }
-            else if(c.type == other){
-                r = 255.f;
+            else if(c.type == tree){
+                r = 0.f;
                 g = 255.f;
                 b = 0.f;
             }
@@ -674,12 +663,12 @@ void SSC::refineClusterByIntensity(Frame& frame_ssc){
     std::vector<int> erase_id;
     for(auto& fusion : fusion_set){
         for(int c = 1; c < fusion.size(); c++){
-            addVec(frame_ssc.cluster_set[fusion[0]].occupy_pts, frame_ssc.cluster_set[fusion[c]].occupy_pts);
-            addVec(frame_ssc.cluster_set[fusion[0]].occupy_voxels, frame_ssc.cluster_set[fusion[c]].occupy_voxels);
-            *frame_ssc.cluster_set[fusion[0]].cloud += *frame_ssc.cluster_set[fusion[c]].cloud;
+            addVec(frame_ssc.cluster_set[fusion[0]].occupy_pts, frame_ssc.cluster_set[fusion[c]].occupy_pts);  // occupy_pts
+            addVec(frame_ssc.cluster_set[fusion[0]].occupy_voxels, frame_ssc.cluster_set[fusion[c]].occupy_voxels);  // occupy_voxels
+            *frame_ssc.cluster_set[fusion[0]].cloud += *frame_ssc.cluster_set[fusion[c]].cloud;  // cloud
             erase_id.emplace_back(fusion[c]);
         }
-        frame_ssc.cluster_set[fusion[0]].cluster_center = getCenterOfCloud(frame_ssc.cluster_set[fusion[0]].cloud);
+        frame_ssc.cluster_set[fusion[0]].cluster_center = getCenterOfCloud(frame_ssc.cluster_set[fusion[0]].cloud);  // cluster_center
     }
 
     std::vector<Cluster> cluster_set_tmp;
@@ -689,11 +678,17 @@ void SSC::refineClusterByIntensity(Frame& frame_ssc){
         }
     }
     frame_ssc.cluster_set.swap(cluster_set_tmp);
-
+    
     frame_ssc.center_cloud->clear();
-    for(auto& c : frame_ssc.cluster_set){  // center cloud
-        frame_ssc.center_cloud->points.push_back(c.cluster_center);
+    for(int  i = 0; i < frame_ssc.cluster_set.size(); i++){
+        frame_ssc.center_cloud->points.push_back(frame_ssc.cluster_set[i].cluster_center);  // center cloud
+        frame_ssc.cluster_set[i].cloud_observe[0].second = i;  // cloud_observe
+        for(auto& v : frame_ssc.cluster_set[i].occupy_voxels){  // hash_cloud
+            hash_cloud[v].label = i;
+        }
     }
+    hash_cloud.swap(hash_cloud);
+    frame_ssc.hash_cloud = hash_cloud;
 }
 
 void SSC::segment(){
@@ -707,7 +702,7 @@ void SSC::segment(){
     // // save segment cloud
     // saveSegCloud(frame_ssc);
 
-    ROS_INFO("frame %d segment: time_use(ms): %0.2f, refined cluster_num: %d", id, (float)segment_t.toc(), (int)frame_ssc.cluster_set.size());
+    ROS_INFO("segment: time_use(ms): %0.2f, refined cluster_num: %d", (float)segment_t.toc(), (int)frame_ssc.cluster_set.size());
 }
 
 Feature SSC::getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_){
@@ -830,12 +825,47 @@ Eigen::MatrixXd SSC::getFeature20(const Eigen::MatrixXd& eigenvalue_matrix_, con
     return f_20;
 }
 
+bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_){
+    pcl::search::Search<pcl::PointXYZI>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZI>());
+    pcl::PointCloud <pcl::Normal>::Ptr normals (new pcl::PointCloud <pcl::Normal>());
+    pcl::NormalEstimation<pcl::PointXYZI, pcl::Normal> normal_estimator;
+    normal_estimator.setSearchMethod (tree);
+    normal_estimator.setInputCloud (cluster_cloud_);
+    normal_estimator.setKSearch(toBeClass);
+    normal_estimator.compute (*normals);
+
+    pcl::RegionGrowing<pcl::PointXYZI, pcl::Normal> reg;
+    reg.setMinClusterSize (toBeClass * 4); 
+    reg.setMaxClusterSize (100000);
+    reg.setSearchMethod (tree);
+    reg.setNumberOfNeighbours (toBeClass);
+    reg.setInputCloud (cluster_cloud_);
+    reg.setInputNormals (normals);
+    reg.setSmoothnessThreshold (8.0 / 180.0 * M_PI);  // TODO: ?
+    reg.setCurvatureThreshold (1.5);
+
+    std::vector <pcl::PointIndices> clusters;
+    reg.extract (clusters);
+    std::vector<int> plane_pts;
+    for(int i = 0; i < clusters.size(); i++){
+        for(auto& p : clusters[i].indices){
+            plane_pts.emplace_back(p);
+        }
+    }
+
+    if(plane_pts.size() >= cluster_cloud_->points.size() * 0.2){
+        return true;
+    }
+    else{
+        return false;
+    }
+}
+
 void SSC::recognize(){
     TicToc recognize_t("recognize");
-    const double linearity_th = 0.01;
+    const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double height = 2.f;
-    int highDynamic = 0;
+    const double height = 1.f;
     for(auto& c : frame_ssc.cluster_set){
         Feature eigen_f = getDescriptorByEigenValue(c.cloud);
         Eigen::MatrixXd eigen_f_10 = turnVec2Matrix(eigen_f.feature_values);
@@ -844,39 +874,214 @@ void SSC::recognize(){
         // Eigen::MatrixXd f_20 = getFeature20(eigen_f_10, ensemble_f_10);
         Eigen::MatrixXd f_10 = eigen_f_10;
         
-        if(f_10(0, 1) >= planarity_th && f_10(0, 8) > height){  // linearity && planarity && height
-            f_10(0, 9) = building;  // type
+        if(regionGrowing(c.cloud) && f_10(0, 8) > height){
+            f_10(0, 9) = (double)building;
             c.type = building;
             c.feature_matrix = f_10;
         }
         else{
-            if(f_10(0, 7) == 0 && f_10(0, 8) <= height){
-                f_10(0, 9) == car;
-                c.type = car;
+            if(f_10(0, 8) > height && f_10(0, 0) < linearity_th){
+                f_10(0, 9) = (double)tree;
+                c.type = tree;
                 c.feature_matrix = f_10;
-                highDynamic ++;
             }
             else{
-                if(f_10(0, 1) < planarity_th && f_10(0, 8) > height){
-                    f_10(0, 9) == tree;
-                    c.type = tree;
-                    c.feature_matrix = f_10;
-                }
-                else{
-                    f_10(0, 9) == other;
-                    c.type = other;
-                    c.feature_matrix = f_10;
-                    highDynamic ++;
-                }
+                f_10(0, 9) = (double)other;
+                c.type = other;
+                c.feature_matrix = f_10;
             }
         }
-        std::cout << "feature_matrix: " << c.feature_matrix << std::endl;
+        // std::cout << "feature_matrix: " << c.feature_matrix << std::endl;
     }
 
     // save 
     saveSegCloud(frame_ssc);
-    ROS_DEBUG("recognize info: time_use(ms): %0.2f, high dynamic num: %d", (float)recognize_t.toc(), highDynamic);
+    ROS_INFO("recognize: time_use(ms): %0.2f", (float)recognize_t.toc());
 }
 
+float SSC::compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixXd& feature2_){
+    float diff = 0.;
+    Eigen::MatrixXd f_diff = (feature1_ - feature2_).cwiseAbs();
+    diff += (f_diff (0, 0) * 0.5);  // linearity
+    diff += (f_diff (0, 1) * 0.5);  // planarity
+    diff += (f_diff (0, 2) * 0.2);  // scattering
+    diff += (f_diff (0, 3) * 0.2);  // omnivariance
+    diff += (f_diff (0, 4) * 0.2);  // anisotropy
+    diff += (f_diff (0, 5) * 0.2);  // eigen_entropy
+    diff += (f_diff (0, 6) * 0.2);  // change_of_curvature
+    diff += (f_diff (0, 7) * 0.6);  // point_up
+    diff += (f_diff (0, 8) * 0.2);  // max_z
+    diff += (f_diff (0, 9) * 0.0);  // type
+    return diff;
+}
 
+void SSC::dynamicDetect(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_){
+    Eigen::Affine3f trans_pre = pcl::getTransformation(pose_pre_.x, pose_pre_.y, pose_pre_.z, pose_pre_.roll, pose_pre_.pitch, pose_pre_.yaw);
+    Eigen::Affine3f trans_next = pcl::getTransformation(pose_next_.x, pose_next_.y, pose_next_.z, pose_next_.roll, pose_next_.pitch, pose_next_.yaw);
+    Eigen::Affine3f trans = trans_pre .inverse() * trans_next;   // transform next to previous
+    pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_pre(new pcl::PointCloud<pcl::PointXYZI>());
+    pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_next(new pcl::PointCloud<pcl::PointXYZI>());
+    vox_cloud_pre = frame_pre_.vox_cloud;
+    transformCloud(frame_next_.vox_cloud, trans, vox_cloud_next);
+    
+    // search from previous to next
+    std::cout << "frame_pre_: " << frame_pre_.cluster_set.size() << " frame_next_: " << frame_next_.cluster_set.size() << std::endl;
+    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree_inverse;
+    kdtree.setInputCloud(vox_cloud_next);
+    kdtree_inverse.setInputCloud(vox_cloud_pre);
+    int dynamic = 0;
+    for(int i = 0; i < frame_pre_.cluster_set.size(); i++){
+        if(!((frame_pre_.cluster_set[i].type == other && frame_pre_.cluster_set[i].state == -2) || frame_pre_.cluster_set[i].state == -1)){
+            continue;
+        }
+        std::vector<int> neighbor_vox;
+        for(auto& v : frame_pre_.cluster_set[i].occupy_voxels){
+            std::vector<int> vox_id;
+            std::vector<float> vox_dis;
+            kdtree.nearestKSearch(vox_cloud_pre->points[v], 1, vox_id, vox_dis);
+            addVec(neighbor_vox, vox_id);
+        }
+        sampleVec(neighbor_vox);
+        
+        std::vector<int> neighbor_cluster;
+        for(auto& n : neighbor_vox){
+            std::unordered_map<int, Voxel>::iterator it_find = frame_next_.hash_cloud.find(n);
+            if(it_find == frame_next_.hash_cloud.end()){
+                ROS_WARN("frame_next's hash_cloud error");
+                continue;
+            }
+            neighbor_cluster.emplace_back(frame_next_.hash_cloud[n].label);
+        }
+        sampleVec(neighbor_cluster);
 
+        if(neighbor_cluster.size() == 0){
+            frame_pre_.cluster_set[i].state = 1;
+            continue;
+        }
+
+        else if(neighbor_cluster.size() == 1){
+            if(frame_pre_.cluster_set[i].type == other && frame_next_.cluster_set[neighbor_cluster[0]].type == other){
+                float diff = compareFeature(frame_pre_.cluster_set[i].feature_matrix, frame_next_.cluster_set[neighbor_cluster[0]].feature_matrix);
+                if(diff >= feature_diff){
+                    std::vector<int> neighbor_vox_inverse;
+                    for(auto& v : frame_next_.cluster_set[neighbor_cluster[0]].occupy_voxels){
+                        std::vector<int> vox_id;
+                        std::vector<float> vox_dis;
+                        kdtree_inverse.nearestKSearch(vox_cloud_next->points[v], 1, vox_id, vox_dis);
+                        addVec(neighbor_vox_inverse, vox_id);
+                    }
+                    sampleVec(neighbor_vox_inverse);
+
+                    std::vector<int> neighbor_cluster_inverse;
+                    for(auto& n : neighbor_vox_inverse){
+                        std::unordered_map<int, Voxel>::iterator it_find = frame_pre_.hash_cloud.find(n);
+                        if(it_find == frame_pre_.hash_cloud.end()){
+                            ROS_WARN("frame_pre's hash_cloud error");
+                            continue;
+                        }
+                        neighbor_cluster_inverse.emplace_back(frame_pre_.hash_cloud[n].label);
+                    }
+                    sampleVec(neighbor_cluster_inverse);
+
+                    if(!findNameInVec(i, neighbor_cluster_inverse)){
+                        frame_pre_.cluster_set[i].state = 1;
+                        continue;
+                    }
+
+                    if(neighbor_cluster_inverse.size() == 1){
+                        frame_pre_.cluster_set[i].state = 1;
+                        frame_next_.cluster_set[neighbor_cluster[0]].state = 1;
+                        continue;
+                    }
+                    else{
+                        std::sort(neighbor_cluster_inverse.begin(), neighbor_cluster_inverse.end());
+                        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
+                        for(auto& c : neighbor_cluster_inverse){
+                            *cloud += *frame_pre_.cluster_set[c].cloud;
+                        }
+                        Feature eigen_f = getDescriptorByEigenValue(cloud);
+                        Eigen::MatrixXd f = turnVec2Matrix(eigen_f.feature_values);
+                        float diff_new = compareFeature(frame_next_.cluster_set[neighbor_cluster[0]].feature_matrix, f);
+                        if(diff_new < feature_diff){
+                            frame_pre_.compensate.emplace_back(neighbor_cluster_inverse);
+                            for(auto& c : neighbor_cluster_inverse){
+                                frame_pre_.cluster_set[c].state = 0;
+                                frame_pre_.cluster_set[c].cloud_observe.emplace_back(std::make_pair(frame_next_.id, neighbor_cluster[0]));
+                            }
+                            frame_next_.cluster_set[neighbor_cluster[0]].state = 0;
+                            frame_next_.cluster_set[neighbor_cluster[0]].cloud_observe.emplace_back(std::make_pair(frame_pre_.id, i));
+                            continue;
+                        }
+                        else{
+                            // for(auto& c : neighbor_cluster_inverse){
+                            //     frame_pre_.cluster_set[c].state = 1;
+                            // }
+                            frame_next_.cluster_set[neighbor_cluster[0]].state = 1;
+                            continue;
+                        }
+                    }
+                }
+                else{
+                    frame_pre_.cluster_set[i].state = 0;
+                    frame_pre_.cluster_set[i].cloud_observe.emplace_back(std::make_pair(frame_next_.id, neighbor_cluster[0]));
+                    frame_next_.cluster_set[neighbor_cluster[0]].state = 0;
+                    frame_next_.cluster_set[neighbor_cluster[0]].cloud_observe.emplace_back(std::make_pair(frame_pre_.id, i));
+                    continue;
+                }
+            }
+            else{
+                if(frame_pre_.cluster_set[i].type == frame_next_.cluster_set[neighbor_cluster[0]].type){
+                    frame_pre_.cluster_set[i].state = 0;
+                    frame_next_.cluster_set[neighbor_cluster[0]].state = 0;
+                    continue;
+                }
+                else{
+                    float diff = compareFeature(frame_pre_.cluster_set[i].feature_matrix, frame_next_.cluster_set[neighbor_cluster[0]].feature_matrix);
+                    if(diff <= feature_diff){
+                        frame_pre_.cluster_set[i].state = 0;
+                        frame_pre_.cluster_set[i].cloud_observe.emplace_back(std::make_pair(frame_next_.id, neighbor_cluster[0]));
+                        frame_next_.cluster_set[neighbor_cluster[0]].state = 0;
+                        frame_next_.cluster_set[neighbor_cluster[0]].cloud_observe.emplace_back(std::make_pair(frame_pre_.id, i));
+                        continue;
+                    }
+                    else{
+                        frame_pre_.cluster_set[i].state = -1;
+                        frame_pre_.cluster_set[i].cloud_observe.emplace_back(std::make_pair(frame_next_.id, neighbor_cluster[0]));
+                        frame_next_.cluster_set[neighbor_cluster[0]].state = -1;
+                        frame_next_.cluster_set[neighbor_cluster[0]].cloud_observe.emplace_back(std::make_pair(frame_pre_.id, i));
+                        continue;
+                    }
+                }
+            }
+        }
+
+        else{
+            std::sort(neighbor_cluster.begin(), neighbor_cluster.end());
+            pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
+            for(auto& c : neighbor_cluster){
+                *cloud += *frame_next_.cluster_set[c].cloud;
+            }
+            Feature eigen_f = getDescriptorByEigenValue(cloud);
+            Eigen::MatrixXd f = turnVec2Matrix(eigen_f.feature_values);
+            float diff_new = compareFeature(frame_pre_.cluster_set[i].feature_matrix, f);
+            if(diff_new <= feature_diff){
+                frame_pre_.cluster_set[i].state = 0;
+                frame_pre_.cluster_set[i].cloud_observe.emplace_back(std::make_pair(frame_next_.id, neighbor_cluster[0]));
+                frame_next_.compensate.emplace_back(neighbor_cluster);
+                for(auto& c : neighbor_cluster){
+                    frame_next_.cluster_set[c].state = 0;
+                    frame_next_.cluster_set[c].cloud_observe.emplace_back(std::make_pair(frame_pre_.id, i));
+                }
+                continue;
+            }
+            else{
+                // for(auto& c : neighbor_cluster){
+                //     frame_next_.cluster_set[c].state = 1;
+                // }
+                frame_pre_.cluster_set[i].state = 1;
+                continue;
+            }
+        }
+    }
+}

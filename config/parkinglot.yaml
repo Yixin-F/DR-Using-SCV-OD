@@ -27,7 +27,7 @@ ssc:
   map_path_2_: "/ssc/02_session/semantic_map/"
 
   min_dis_add_:  1.0  # /m   use 0.0 for parkinglot dataset
-  max_dis_ratio_: 50.0  # ratio
+  max_dis_ratio_: 40.0  # ratio
 
   min_angle_: 0.0  # /deg
   max_angle_: 360.0
@@ -65,14 +65,10 @@ feature:
   kEigenEntropyMax_: 0.956129
   kChangeOfCurvatureMax_: 0.99702
   kNPointsMax_: 13200.0
-  
-  element_num_: 18
-  same_num_: 9
-  same_score_: 0.6
 
-  linearity_thre_: 0.01
-  planarity_thre_: 0.01
-  scattering_thre_: 0.01
+  feature_diff_: 1.2
+  
+
 
 
 

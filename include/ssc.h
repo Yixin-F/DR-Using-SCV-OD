@@ -23,7 +23,6 @@ public:
 
     boost::shared_ptr<PatchWork<pcl::PointXYZI>> PatchworkGroundSeg;   // patchwork
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;  // noground cloud
-    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_vox;  // voxel cloud
 
     ~SSC();
     SSC();
@@ -63,8 +62,10 @@ public:
     
 
     // dynamic detect
+    void removert();
+    void dynamicDetect(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
     float compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixXd& feature2_);
-    float occupancyUseVoxel(const std::vector<int>& voxels1_, const std::vector<int>& voxels2_);
+    
 
 };
 

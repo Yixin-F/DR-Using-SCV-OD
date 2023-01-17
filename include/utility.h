@@ -141,6 +141,7 @@ struct Cluster{
     ~Cluster() {}
     
     int type = -1;
+    int state = - 2;   // dynamic 1, static 0, don't know -1
     int color[3];
     std::vector<int> occupy_pts;
     std::vector<int> occupy_voxels;
@@ -158,12 +159,15 @@ struct Frame{
     ~Frame() {}
     void allocateMemory(){
         center_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
+        vox_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
 
+    int id;
+    std::unordered_map<int, Voxel> hash_cloud;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud;  // voxel cloud
     std::vector<Cluster> cluster_set;   // in the same order with center_cloud
     pcl::PointCloud<pcl::PointXYZI>::Ptr center_cloud;
-    std::vector<int> dynamic_c;  // id in cluster_set
-    std::vector<int> static_c;
+    std::vector<std::vector<int>> compensate;
 };
 
 namespace fs = std::filesystem; // file-process
@@ -227,12 +231,8 @@ public:
     double kEigenEntropyMax;
     double kChangeOfCurvatureMax;
     double kNPointsMax;
-    int element_num;
-    int same_num;
-    float same_score;
-    float linearity_thre;
-    float planarity_thre;
-    float scattering_thre;
+    
+    float feature_diff;
 
     ros::NodeHandle nh;
 
@@ -292,14 +292,7 @@ public:
         nh.param<double>("feature/kEigenEntropyMax_", kEigenEntropyMax, 0.956129);
         nh.param<double>("feature/kChangeOfCurvatureMax_", kChangeOfCurvatureMax, 0.99702);
         nh.param<double>("feature/kNPointsMax_", kNPointsMax, 13200.0);
-        nh.param<int>("feature/element_num_", element_num, 18);
-        nh.param<int>("feature/same_num_", same_num, 6);
-        nh.param<float>("feature/same_score_", same_score, 0.5);
-        nh.param<float>("feature/linearity_thre_", linearity_thre, 0.01);
-        nh.param<float>("feature/planarity_thre_", planarity_thre, 0.01);
-        nh.param<float>("feature/scattering_thre_", scattering_thre, 0.01);
-
-
+        nh.param<float>("feature/feature_diff_", feature_diff, 1.2);
     }
 
     void fsmkdir(std::string _path){
