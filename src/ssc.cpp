@@ -9,11 +9,22 @@ bool swap_if_gt(T& a, T& b) {
   return false;
 }
 
-int SSC::id = 0;
+bool fileSort(std::string name1_, std::string name2_){  // filesort by name
+    std::string::size_type iPos1 = name1_.find_last_of('/') + 1;
+	std::string filename1 = name1_.substr(iPos1, name1_.length() - iPos1);
+	std::string name1 = filename1.substr(0, filename1.rfind("."));
+
+    std::string::size_type iPos2 = name2_.find_last_of('/') + 1;
+    std::string filename2 = name2_.substr(iPos2, name2_.length() - iPos2);
+	std::string name2 = filename2.substr(0, filename2.rfind(".")); 
+
+    return std::stoi(name1) < std::stoi(name2);
+}
 
 SSC::~SSC() {}
 
-SSC::SSC(){
+SSC::SSC(int id_){
+    id = id_;
     allocateMemory();
     std::cout << "----  SSC INITIALIZATION  ----" << "\n"
                        << "range_res: " << range_res << " sector_res: " << sector_res << " azimuth_res: " << azimuth_res << "\n"
@@ -600,7 +611,7 @@ void SSC::saveSegCloud(Frame& frame_ssc){
     }
     rgb_ptr->width = count;
     std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
-    saveCloud(rgb_ptr, save_path, 179, "_seg.pcd");
+    saveCloud(rgb_ptr, save_path, id, "_seg.pcd");
 }
 
 void SSC::refineClusterByIntensity(Frame& frame_ssc){
@@ -1083,5 +1094,26 @@ void SSC::dynamicDetect(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, P
                 continue;
             }
         }
+    }
+}
+
+void SSC::getPose(pcl::PointCloud<Pose>::Ptr& pose_, const std::string& pose_path_){
+    if(pcl::io::loadPCDFile(pose_path_, *pose_) == -1){
+        ROS_WARN("pose file %s load error", pose_path_.c_str());
+        ROS_BREAK();
+    }
+}
+
+void SSC::getCloud(std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>& cloud_vec_, const std::string& cloud_path_){
+    std::vector<std::string> cloud_name;
+    for(auto& entry_ : fs::directory_iterator(cloud_path_)){
+        cloud_name.emplace_back(entry_.path());
+    }
+    std::sort(cloud_name.begin(), cloud_name.end(), fileSort);
+
+    for(int i = 0; i < std::ceil(cloud_name.size() / 70); i++){
+        pcl::PointCloud<pcl::PointXYZI>::Ptr tmp_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        pcl::io::loadPCDFile(cloud_name[i], *tmp_cloud);
+        cloud_vec_.emplace_back(tmp_cloud);
     }
 }

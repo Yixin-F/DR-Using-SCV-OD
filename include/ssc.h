@@ -6,7 +6,7 @@
 
 class SSC: public Utility{
 public:
-    static int id;
+    int id;
 
     int range_num = -1;  // upate in each ssc 
     int sector_num = -1;
@@ -25,7 +25,7 @@ public:
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;  // noground cloud
 
     ~SSC();
-    SSC();
+    SSC(int id_);
 
     // allocate memory and reset
     void allocateMemory();
@@ -65,7 +65,10 @@ public:
     void removert();
     void dynamicDetect(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
     float compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixXd& feature2_);
-    
+
+    // tool
+    void getPose(pcl::PointCloud<Pose>::Ptr& pose_, const std::string& pose_path_);
+    void getCloud(std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>& cloud_vec_, const std::string& cloud_path_);
 
 };
 
