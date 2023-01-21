@@ -67,6 +67,7 @@ feature:
   kNPointsMax_: 13200.0
 
   feature_diff_: 1.2
+  distance_diff_: 0.5
   
 
 

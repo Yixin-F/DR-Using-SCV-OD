@@ -24,6 +24,9 @@ public:
     boost::shared_ptr<PatchWork<pcl::PointXYZI>> PatchworkGroundSeg;   // patchwork
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;  // noground cloud
 
+    std::unordered_map<int, Cluster> cluster_track;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_map;
+
     ~SSC();
     SSC(int id_);
 
@@ -63,7 +66,8 @@ public:
 
     // dynamic detect
     void removert();
-    void dynamicDetect(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
+    void typeIntialization(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
+    void tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
     float compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixXd& feature2_);
 
     // tool

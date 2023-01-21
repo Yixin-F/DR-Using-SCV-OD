@@ -140,8 +140,9 @@ struct Cluster{
     Cluster() {}
     ~Cluster() {}
     
+    int name;
     int type = -1;
-    int state = - 2;   // dynamic 1, static 0, don't know -1
+    int state = - 1;   // segment error 2, dynamic 1, static 0 
     int color[3];
     std::vector<int> occupy_pts;
     std::vector<int> occupy_voxels;
@@ -149,6 +150,9 @@ struct Cluster{
     std::vector<std::pair<int, int>> cloud_observe;  // <frame_id, cluster_id in this frame>
     pcl::PointXYZI cluster_center;
     Eigen::MatrixXd feature_matrix;
+
+    int track = 0;
+    Pose pose;
 };
 
 // one frame
@@ -233,6 +237,7 @@ public:
     double kNPointsMax;
     
     float feature_diff;
+    float distance_diff;
 
     ros::NodeHandle nh;
 
@@ -293,6 +298,7 @@ public:
         nh.param<double>("feature/kChangeOfCurvatureMax_", kChangeOfCurvatureMax, 0.99702);
         nh.param<double>("feature/kNPointsMax_", kNPointsMax, 13200.0);
         nh.param<float>("feature/feature_diff_", feature_diff, 1.2);
+        nh.param<float>("feature/distance_diff_", distance_diff, 0.5);
     }
 
     void fsmkdir(std::string _path){
