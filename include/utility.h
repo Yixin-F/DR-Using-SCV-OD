@@ -71,6 +71,8 @@
 #include "assert.h"
 #include "tictoc.h"
 
+namespace fs = std::filesystem; // file-process
+
 // pose-point cloud from lio-sam
 struct PointXYZIRPYT
 {
@@ -88,6 +90,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
                                    (float, z, z) (float, intensity, intensity)
                                    (float, roll, roll) (float, pitch, pitch) (float, yaw, yaw)
                                    (double, time, time))
+typedef PointXYZIRPYT  Pose;
 
 // apiric-format of point
 struct PointAPRI{
@@ -173,9 +176,6 @@ struct Frame{
     pcl::PointCloud<pcl::PointXYZI>::Ptr center_cloud;
     std::vector<std::vector<int>> compensate;
 };
-
-namespace fs = std::filesystem; // file-process
-typedef PointXYZIRPYT  Pose;
 
 class Utility{
 public:

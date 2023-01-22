@@ -35,8 +35,8 @@ ssc:
   min_azimuth_: -30.0  # /deg
   max_azimuth_: 60.0
 
-  range_res_: 0.25
-  sector_res_: 1.2
+  range_res_: 0.2
+  sector_res_: 1.0
   azimuth_res_: 2.0
 
   max_intensity_: 200.0  # intenisty calibration
@@ -45,9 +45,9 @@ ssc:
   search_num_: 10
 
   toBeClass_: 10  # the min numbers of points to be one class
-  search_c_: 2  # > 1, 2
-  intensity_diff_: 6.0
-  intensity_cov_: 4.0
+  search_c_: 3  # > 1, 2
+  intensity_diff_: 4.0
+  intensity_cov_: 2.0
   occupancy_: 0.6
 
   building_: 0  # cluster map

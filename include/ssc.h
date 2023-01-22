@@ -66,7 +66,7 @@ public:
 
     // dynamic detect
     void removert();
-    void typeIntialization(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
+    Frame intialization(std::vector<Frame>& frames_, const std::vector<Pose>& poses_);
     void tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
     float compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixXd& feature2_);
 
