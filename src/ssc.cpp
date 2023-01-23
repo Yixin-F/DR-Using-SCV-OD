@@ -21,10 +21,11 @@ bool fileSort(std::string name1_, std::string name2_){  // filesort by name
     return std::stoi(name1) < std::stoi(name2);
 }
 
+int SSC::id = 0;
+
 SSC::~SSC() {}
 
-SSC::SSC(int id_){
-    id = id_;
+SSC::SSC(){
     allocateMemory();
     std::cout << "----  SSC INITIALIZATION  ----" << "\n"
                        << "range_res: " << range_res << " sector_res: " << sector_res << " azimuth_res: " << azimuth_res << "\n"
@@ -41,14 +42,14 @@ void SSC::allocateMemory(){
 }
 
 void SSC::reset(){
-    range_num = -1;
-    sector_num = -1;
-    azimuth_num = -1;
-    bin_num = -1;
+    // range_num = -1;
+    // sector_num = -1;
+    // azimuth_num = -1;
+    // bin_num = -1;
 
-    min_dis = 999999.f; 
-    max_dis = -999999.f;
-    sensor_height = -999999.f;
+    // min_dis = 999999.f; 
+    // max_dis = -999999.f;
+    // sensor_height = -999999.f;
 
     Frame frame_new;
     frame_ssc = frame_new;
@@ -384,12 +385,15 @@ void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
     }
 }
 
-void SSC::getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_){
+void SSC::getVoxelCloudFromHashCloud(std::unordered_map<int, Voxel>& hashCloud_){
+    int count = 0;
     for(auto& vox : hashCloud_){
+        vox.second.voxel_cloud_id = count;
+        count ++;
         frame_ssc.vox_cloud->points.push_back(vox.second.center);
     }
     std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
-    saveCloud(frame_ssc.vox_cloud, save_path, 179, "_vox.pcd");
+    saveCloud(frame_ssc.vox_cloud, save_path, id, "_vox.pcd");
 }
 
 void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::unordered_map<int, Voxel>& hash_cloud_){
@@ -499,7 +503,7 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
     }
 
     std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
-    saveCloud(frame_ssc.center_cloud, save_path, 179, "_clusterCenter.pcd");
+    saveCloud(frame_ssc.center_cloud, save_path, id, "_clusterCenter.pcd");
     ROS_DEBUG("cluster and create frame: time_use(ms): %0.2f, cluster_num: %d, pt_num: %d", (float)cluster_t.toc(), final_clusterNum, pt_count);
 }
 
@@ -555,8 +559,8 @@ bool SSC::refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr&
     pcl::PointXYZI point_min = bounding_box.first;
     pcl::PointXYZI point_max = bounding_box.second;
     float diff_z = point_max.z - point_min.z;
-    if(point_min.z > sensor_height / 3 || diff_z <= 0.2){
-    // if(point_max.z < 0 && diff_z <= 0.2){
+    if(point_min.z > sensor_height || diff_z <= 0.2){
+    // if(diff_z <= 0.2){
         return false;
     }
     else{
@@ -927,44 +931,27 @@ float SSC::compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixX
     return diff;
 }
 
-// use several frames to initialize cluster map
-Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& poses_){
-    // get initial frame
-    if(frames_.size() < 5){
-        ROS_WARN("frame initialzation error");
-        return frames_.back();
-    }
-    std::cout << "frames_: " << frames_.size() << std::endl;
-    int initial_id;
-    int max_num = 0;
-    for(int i = 2; i < frames_.size() - 2; i++){
-        if(frames_[i].cluster_set.size() >= max_num){
-            max_num = frames_[i].cluster_set.size();
-            initial_id = i;
-        }
-    }
-    std::cout << "initial_id: " << initial_id << std::endl;
-    Frame frame_initial = frames_[initial_id];
-    Pose pose_initial = poses_[initial_id];
-    Eigen::Affine3f trans_initial = pcl::getTransformation(pose_initial.x, pose_initial.y, pose_initial.z, pose_initial.roll, pose_initial.pitch, pose_initial.yaw);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_initial(new pcl::PointCloud<pcl::PointXYZI>());
-    vox_cloud_initial = frame_initial.vox_cloud;
-    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree_initial;
-    kdtree_initial.setInputCloud(vox_cloud_initial);
-    
-    for(int k = 0; k < frames_.size() && k != initial_id; k++){
-        std::cout << "k: " << k << std::endl;
-        Eigen::Affine3f trans_k = pcl::getTransformation(poses_[k].x, poses_[k].y, poses_[k].z, poses_[k].roll, poses_[k].pitch, poses_[k].yaw);
-        Eigen::Affine3f trans = trans_initial.inverse() * trans_k;
-        pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_k(new pcl::PointCloud<pcl::PointXYZI>());
-        transformCloud(frames_[k].vox_cloud, trans, vox_cloud_k);
+void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_){
+    pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_pre(new pcl::PointCloud<pcl::PointXYZI>());
+    vox_cloud_pre = frame_pre_.vox_cloud;
+    Eigen::Affine3f trans_pre = pcl::getTransformation(pose_pre_.x, pose_pre_.y, pose_pre_.z, pose_pre_.roll, pose_pre_.pitch, pose_pre_.yaw);
 
-        // interactive search between frame_k and frame_initial 
-        std::unordered_map<int, std::vector<int>> k_to_initial;
-        std::unordered_map<int, std::vector<int>>::iterator k_find;
-        for(int j = 0; j < vox_cloud_k->points.size(); j++){
+    pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_next(new pcl::PointCloud<pcl::PointXYZI>());
+    Eigen::Affine3f trans_next = pcl::getTransformation(pose_next_.x, pose_next_.y, pose_next_.z, pose_next_.roll, pose_next_.pitch, pose_next_.yaw);
+    Eigen::Affine3f trans = trans_pre.inverse() * trans_next;
+    transformCloud(frame_next_.vox_cloud, trans, vox_cloud_next);
+    
+    // for(int i = 0; i < frame_next_.vox_cloud->points.size(); i++){
+    //     std::cout << "bin_num: " << bin_num << std::endl;
+    //     std::cout << frame_next_.vox_cloud->points[i].intensity << std::endl;
+    // }
+
+    for(int i = 0; i < frame_pre_.cluster_set.size(); i++){
+        std::cout << "i: " << i << std::endl;
+        for(auto& v : frame_pre_.cluster_set[i].occupy_voxels){
             std::unordered_map<int, Voxel>::iterator it_find;
-            pcl::PointXYZI v_pt = vox_cloud_k->points[j];
+            int cloud_id = frame_pre_.hash_cloud[v].voxel_cloud_id;
+            pcl::PointXYZI v_pt = frame_pre_.vox_cloud->points[cloud_id];
             float dis = pointDistance2d(v_pt);
             int r_id = std::ceil((dis - min_dis) / range_res) - 1;
             float angle = getPolarAngle(v_pt);
@@ -972,34 +959,96 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
             float azimuth = getAzimuth(v_pt);
             int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
             int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
-            it_find = frame_initial.hash_cloud.find(v_id);
-            if(it_find == frame_initial.hash_cloud.end()){
-                std::cout << "error" << std::endl;
+            
+            it_find = frame_next_.hash_cloud.find(v_id);
+            if(it_find == frame_next_.hash_cloud.end()){
                 continue;
             }
-            k_find = k_to_initial.find(frames_[k].hash_cloud[v_pt.intensity].label);
-            if(k_find == k_to_initial.end()){
-                std::vector<int> c_name;
-                c_name.emplace_back(it_find->second.label);
-                k_to_initial.insert(std::make_pair(frames_[k].hash_cloud[v_pt.intensity].label, c_name));
-            }
-            else{
-                k_find->second.emplace_back(it_find->second.label);
-            }
-        }
+            std::cout << "cloud_id: " << cloud_id << " ";
+            std::cout << "v_id: " << v_id << " ";
 
-        for(auto& to : k_to_initial){
-            std::cout << "k_c: " << to.first << " ";
-            for(auto& c : to.second){
-                std::cout << "initial_c: " << c << " ";
-            }
         }
         std::cout << std::endl;
-
     }
 
-    return frame_initial;
 }
+
+// // use several frames to initialize cluster map
+// Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& poses_){
+//     // get initial frame
+//     if(frames_.size() < 5){
+//         ROS_WARN("frame initialzation error");
+//         return frames_.back();
+//     }
+//     std::cout << "frames_: " << frames_.size() << std::endl;
+//     int initial_id;
+//     int max_num = 0;
+//     for(int i = 2; i < frames_.size() - 2; i++){
+//         if(frames_[i].cluster_set.size() >= max_num){
+//             max_num = frames_[i].cluster_set.size();
+//             initial_id = i;
+//         }
+//     }
+//     std::cout << "initial_id: " << initial_id << std::endl;
+//     Frame frame_initial = frames_[initial_id];
+//     Pose pose_initial = poses_[initial_id];
+//     Eigen::Affine3f trans_initial = pcl::getTransformation(pose_initial.x, pose_initial.y, pose_initial.z, pose_initial.roll, pose_initial.pitch, pose_initial.yaw);
+//     pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_initial(new pcl::PointCloud<pcl::PointXYZI>());
+//     vox_cloud_initial = frame_initial.vox_cloud;
+//     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree_initial;
+//     kdtree_initial.setInputCloud(vox_cloud_initial);
+
+//     for(int k = 0; k < frames_.size() && k != initial_id; k++){
+//         std::cout << "k: " << k << std::endl;
+//         Eigen::Affine3f trans_k = pcl::getTransformation(poses_[k].x, poses_[k].y, poses_[k].z, poses_[k].roll, poses_[k].pitch, poses_[k].yaw);
+//         Eigen::Affine3f trans = trans_initial.inverse() * trans_k;
+//         pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_k(new pcl::PointCloud<pcl::PointXYZI>());
+//         transformCloud(frames_[k].vox_cloud, trans, vox_cloud_k);
+        
+//         std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
+//         saveCloud(vox_cloud_k, save_path, k, "_trans.pcd");
+
+//         // interactive search between frame_k and frame_initial 
+//         std::unordered_map<int, std::vector<int>> k_to_initial;
+//         std::unordered_map<int, std::vector<int>>::iterator k_find;
+//         for(int j = 0; j < vox_cloud_k->points.size(); j++){
+//             std::unordered_map<int, Voxel>::iterator it_find;
+//             pcl::PointXYZI v_pt = vox_cloud_k->points[j];
+//             float dis = pointDistance2d(v_pt);
+//             int r_id = std::ceil((dis - min_dis) / range_res) - 1;
+//             float angle = getPolarAngle(v_pt);
+//             int s_id = std::ceil((angle - min_angle) / sector_res) - 1;
+//             float azimuth = getAzimuth(v_pt);
+//             int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
+//             int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
+//             it_find = frame_initial.hash_cloud.find(v_id);
+//             if(it_find == frame_initial.hash_cloud.end()){
+//                 std::cout << "error" << std::endl;
+//                 continue;
+//             }
+//             k_find = k_to_initial.find(frames_[k].hash_cloud[v_pt.intensity].label);
+//             if(k_find == k_to_initial.end()){
+//                 std::vector<int> c_name;
+//                 c_name.emplace_back(it_find->second.label);
+//                 k_to_initial.insert(std::make_pair(frames_[k].hash_cloud[v_pt.intensity].label, c_name));
+//             }
+//             else{
+//                 k_find->second.emplace_back(it_find->second.label);
+//             }
+//         }
+
+//         for(auto& to : k_to_initial){
+//             std::cout << "k_c: " << to.first << " ";
+//             for(auto& c : to.second){
+//                 std::cout << "initial_c: " << c << " ";
+//             }
+//         }
+//         std::cout << std::endl;
+
+//     }
+
+//     return frame_initial;
+// }
 
 
 

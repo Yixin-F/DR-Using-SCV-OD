@@ -6,7 +6,7 @@
 
 class SSC: public Utility{
 public:
-    int id;
+    static int id;
 
     int range_num = -1;  // upate in each ssc 
     int sector_num = -1;
@@ -28,7 +28,7 @@ public:
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_map;
 
     ~SSC();
-    SSC(int id_);
+    SSC();
 
     // allocate memory and reset
     void allocateMemory();
@@ -42,7 +42,7 @@ public:
     void downSampleAndMakeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
     void intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
     void makeHashCloud(const std::vector<PointAPRI>& apriIn_);  
-    void getVoxelCloudFromHashCloud(const std::unordered_map<int, Voxel>& hashCloud_);
+    void getVoxelCloudFromHashCloud(std::unordered_map<int, Voxel>& hashCloud_);
 
     // segment
     void segment();

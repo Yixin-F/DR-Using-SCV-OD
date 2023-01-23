@@ -18,7 +18,7 @@ int main(int argc, char** argv){
 
     // ssc.recognize();
 
-    SSC ssc(999);
+    SSC ssc;
     std::string pose_path = "/home/fyx/ufo_final/src/dataset/session/01_session/transformations.pcd";
     std::string cloud_path = "/home/fyx/ufo_final/src/dataset/session/01_session/Scans/";
     pcl::PointCloud<Pose>::Ptr pose(new pcl::PointCloud<Pose>());
@@ -27,23 +27,28 @@ int main(int argc, char** argv){
     ssc.getCloud(cloud_vec, cloud_path);
 
     std::vector<Frame> frames;
+    std::vector<Pose> poses;
     for(int i = 0; i < 6; i++){
-        SSC ssc(i);
         ssc.process(cloud_vec[i]);
         ssc.segment();
         ssc.recognize();
         frames.emplace_back(ssc.frame_ssc);
+        poses.emplace_back(pose->points[i]);
+        ssc.reset();
+        ssc.id ++;
+        std::cout << std::endl;
     }
 
-    std::vector<Frame> frame2Initial;
-    std::vector<Pose> pose2Initial;
-    for(int k = 0; k < 5; k++){
-        std::cout << k << std::endl;
-        frame2Initial.emplace_back(frames[k]);
-        pose2Initial.emplace_back(pose->points[k]);
-    }
-    std::cout << "start initialization" << std::endl;
-    Frame frame_initial = ssc.intialization(frame2Initial, pose2Initial);
+    ssc.tracking(frames[0], frames[1], poses[0], poses[1]);
+    // std::vector<Frame> frame2Initial;
+    // std::vector<Pose> pose2Initial;
+    // for(int k = 0; k < 5; k++){
+    //     std::cout << k << std::endl;
+    //     frame2Initial.emplace_back(frames[k]);
+    //     pose2Initial.emplace_back(pose->points[k]);
+    // }
+    // std::cout << "start initialization" << std::endl;
+    // Frame frame_initial = ssc.intialization(frame2Initial, pose2Initial);
 
     ros::spin();
 

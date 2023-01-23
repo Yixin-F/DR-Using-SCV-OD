@@ -111,6 +111,7 @@ struct Voxel{
     int sector_idx;
     int azimuth_idx;
     int label = -1;
+    int voxel_cloud_id;
     std::vector<int> ptIdx;  // the vector of id in noground cloud
     pcl::PointXYZI center;   // the point center's intensity is its id in voxel cloud
     std::vector<float> intensity_record;
