@@ -8,21 +8,17 @@ class SSC: public Utility{
 public:
     static int id;
 
-    int range_num = -1;  // upate in each ssc 
-    int sector_num = -1;
-    int azimuth_num = -1;
-    int bin_num = -1;
-
-    float min_dis = 999999.f;  // refer to the previous frame
-    float max_dis = -999999.f;
-    double sensor_height = -999999.f;
+    int range_num; 
+    int sector_num;
+    int azimuth_num;
+    int bin_num;
 
     std::vector<PointAPRI> apri_vec;
     std::unordered_map<int, Voxel> hash_cloud;
     Frame frame_ssc;
 
     boost::shared_ptr<PatchWork<pcl::PointXYZI>> PatchworkGroundSeg;   // patchwork
-    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;  // noground cloud
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;  // noground cloud with intenisty calibrated
 
     std::unordered_map<int, Cluster> cluster_track;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_map;
@@ -36,7 +32,6 @@ public:
 
     // pre-process pointcloud
     void process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);
-    void getCloudInfo(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);
     pcl::PointCloud<pcl::PointXYZI>::Ptr extractGroudByPatchWork(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);  // extract ground by pathwork
     void intensityCalibrationByCurvature(pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);  // calibrate point by intensity by curvature
     void downSampleAndMakeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
@@ -54,13 +49,14 @@ public:
     std::pair<pcl::PointXYZI, pcl::PointXYZI> getBoundingBoxOfCloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
     bool refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_cluster_);
     void refineClusterByIntensity(Frame& frame_ssc);
-    void saveSegCloud(Frame& frame_ssc);
+    void fusionTwoClusters(Cluster& cluster1_, const Cluster& cluster2_);
+    void saveSegCloud(Frame& frame_ssc, const std::string& path_, const int& id_, const std::string& name_);
 
     // feature recognize
     void recognize();
     Feature getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
     Feature getDescriptorByEnsembleShape(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
-    Eigen::MatrixXd getFeature20(const Eigen::MatrixXd& eigenvalue_matrix_, const Eigen::MatrixXd& ensembleshape_matrix_);
+    Eigen::MatrixXd getFeature21(const Eigen::MatrixXd& eigenvalue_matrix_, const Eigen::MatrixXd& ensembleshape_matrix_);
     bool regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
     
 

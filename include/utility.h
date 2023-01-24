@@ -144,18 +144,15 @@ struct Cluster{
     Cluster() {}
     ~Cluster() {}
     
-    int name;
-    int type = -1;
-    int state = - 1;   // segment error 2, dynamic 1, static 0 
+    int name = -1;  // tracking
+    int type = -1;  // building, tree, car, other
+    int state = - 1;   //  dynamic 1, static 0 
     int color[3];
-    std::vector<int> occupy_pts;
-    std::vector<int> occupy_voxels;
+    std::vector<int> occupy_pts;  // pt id in cloud_use, prepared to evalute
+    std::vector<int> occupy_voxels;  // id in hash cloud
+    std::vector<int> occupy_vcs;  // voxel id in voxel cloud of frame
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud;
-    std::vector<std::pair<int, int>> cloud_observe;  // <frame_id, cluster_id in this frame>
-    pcl::PointXYZI cluster_center;
     Eigen::MatrixXd feature_matrix;
-
-    int track = 0;
     Pose pose;
 };
 
@@ -166,7 +163,6 @@ struct Frame{
     }
     ~Frame() {}
     void allocateMemory(){
-        center_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
         vox_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
 
@@ -174,8 +170,6 @@ struct Frame{
     std::unordered_map<int, Voxel> hash_cloud;
     pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud;  // voxel cloud
     std::vector<Cluster> cluster_set;   // in the same order with center_cloud
-    pcl::PointCloud<pcl::PointXYZI>::Ptr center_cloud;
-    std::vector<std::vector<int>> compensate;
 };
 
 class Utility{
@@ -201,8 +195,10 @@ public:
     std::string relo_path_2;
     std::string map_path_1;
     std::string map_path_2;
-    float min_dis_add;
-    float max_dis_ratio;
+
+    float sensor_height;
+    float min_dis;
+    float max_dis;
     float min_angle;
     float max_angle;
     float min_azimuth;
@@ -266,8 +262,10 @@ public:
         nh.param<std::string>("ssc/relo_path_2_", relo_path_2, " ");
         nh.param<std::string>("ssc/map_path_1_", map_path_1, " ");
         nh.param<std::string>("ssc/map_path_2_", map_path_2, " ");
-        nh.param<float>("ssc/min_dis_add_", min_dis_add, 1.0);
-        nh.param<float>("ssc/max_dis_ratio_", max_dis_ratio, 0.8);
+
+        nh.param<float>("ssc/sensor_height_", sensor_height, 2.0);
+        nh.param<float>("ssc/min_dis_", min_dis, 0.0);
+        nh.param<float>("ssc/max_dis_", max_dis, 50.0);
         nh.param<float>("ssc/min_angle_", min_angle, 0.0);
         nh.param<float>("ssc/max_angle_", max_angle, 360.0);
         nh.param<float>("ssc/min_azimuth_", min_azimuth, -30.0);
@@ -280,7 +278,7 @@ public:
         nh.param<float>("ssc/correct_ratio_", correct_ratio, 0.5);
         nh.param<int>("ssc/search_num_", search_num, 10);
         nh.param<int>("ssc/toBeClass_", toBeClass, 1);
-        nh.param<int>("ssc/search_c_", search_c, 3);
+        nh.param<int>("ssc/search_c_", search_c, 2);
         nh.param<float>("ssc/intensity_diff_", intensity_diff, 50);
         nh.param<float>("ssc/intensity_cov_", intensity_cov, 20);
         nh.param<float>("ssc/occupancy_", occupancy, 0.6);
