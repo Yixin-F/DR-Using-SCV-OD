@@ -150,7 +150,7 @@ struct Cluster{
     int color[3];
     std::vector<int> occupy_pts;  // pt id in cloud_use, prepared to evalute
     std::vector<int> occupy_voxels;  // id in hash cloud
-    std::vector<int> occupy_vcs;  // voxel id in voxel cloud of frame
+    std::vector<int> occupy_vcs; // id in voxel cloud
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud;
     Eigen::MatrixXd feature_matrix;
     Pose pose;
