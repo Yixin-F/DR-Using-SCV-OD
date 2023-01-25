@@ -25,6 +25,10 @@ bool sort1(const std::pair<int, std::vector<int>>& pair1_, const std::pair<int, 
     return pair1_.second.size() <= pair2_.second.size();
 }
 
+bool sort2(const std::vector<int>& vec1_, const std::vector<int>& vec2_){
+    return vec1_.size() < vec2_.size();
+}
+
 int SSC::id = 0;
 
 SSC::~SSC() {}
@@ -1028,13 +1032,13 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
         }
         // std::cout << std::endl;
     }
-    for(auto& intok : initial_to_k){
-        std::cout << "cluster: " << intok.first << " ";
-        for(auto& vec : intok.second){
-            std::cout << "frame: " << vec.first << " neighbor size: " << vec.second.size() << " ";
-        } 
-        std::cout << std::endl;
-    }
+    // for(auto& intok : initial_to_k){
+    //     std::cout << "cluster: " << intok.first << " ";
+    //     for(auto& vec : intok.second){
+    //         std::cout << "frame: " << vec.first << " neighbor size: " << vec.second.size() << " ";
+    //     } 
+    //     std::cout << std::endl;
+    // }
 
     std::vector<int> erase_cluster_id;
     std::unordered_map<int, std::vector<std::pair<int, std::vector<int>>>> devide_cluster;
@@ -1071,10 +1075,10 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
         std::cout << std::endl;
     }
 
-    std::cout << "erase_cluster_id: " << erase_cluster_id.size() << std::endl;
-    for(auto& e : erase_cluster_id){
-        std::cout  << e << " ";
-    }
+    // std::cout << "erase_cluster_id: " << erase_cluster_id.size() << std::endl;
+    // for(auto& e : erase_cluster_id){
+    //     std::cout  << e << " ";
+    // }
 
     for(auto& dc : devide_cluster){
         erase_cluster_id.emplace_back(dc.first);
@@ -1088,15 +1092,38 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
             for(int k =0; k < frames_[frame_ref].cluster_set[d].occupy_vcs.size(); k++){
                 std::vector<int> c_id;
                 std::vector<float> c_dis;
-                kdtree_initial.nearestKSearch(vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]], 1, c_id, c_dis);
-                if(vox_cloud_initial->points[c_id[0]].intensity != -1){
-                    ref_vox.emplace_back(c_id[0]);
+                // kdtree_initial.nearestKSearch(vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]], 1, c_id, c_dis);
+                // if(vox_cloud_initial->points[c_id[0]].intensity != -1){
+                //     ref_vox.emplace_back(c_id[0]);
+                // }
+                kdtree_initial.radiusSearch(vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]], 0.6, c_id, c_dis);
+                for(auto& id : c_id){
+                    if(vox_cloud_initial->points[id].intensity != -1){
+                        ref_vox.emplace_back(id);
+                    }
                 }
+                // pcl::PointXYZI v_pt = vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]];
+                // float dis = pointDistance2d(v_pt);
+                // int r_id = std::ceil((dis - min_dis) / range_res) - 1;
+                // float angle = getPolarAngle(v_pt);
+                // int s_id = std::ceil((angle - min_angle) / sector_res) - 1;
+                // float azimuth = getAzimuth(v_pt);
+                // int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
+                // int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
+
+                // ref_vox.emplace_back(frame_initial.hash_cloud[v_id].voxel_cloud_id);
             }
             sampleVec(ref_vox);   // TODO: chong fu de voxel !!
             devided_vox.emplace_back(ref_vox);
         }
-        
+
+        std::sort(devided_vox.begin(), devided_vox.end(), sort2);
+        std::vector<int> vec_tmp = frame_initial.cluster_set[dc.first].occupy_vcs;
+        for(int t = 0; t < devided_vox.size() - 1; t++){
+            reduceVec(vec_tmp, devided_vox[t]);
+        }
+        devided_vox.back() = vec_tmp;
+
         for(auto& nv : devided_vox){
             Cluster cluster_new;
             cluster_new.occupy_vcs = nv;
@@ -1109,7 +1136,7 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
                 float azimuth = getAzimuth(v_pt);
                 int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
                 int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
-                addVec(cluster_new.occupy_pts, frame_initial.hash_cloud[v_id].ptIdx);
+                addVec(cluster_new.occupy_pts, frame_initial.hash_cloud[v_id].ptIdx);  // TODO: ??
             }
             pcl::PointCloud<pcl::PointXYZI>::Ptr new_cloud(new pcl::PointCloud<pcl::PointXYZI>());
             getCloudByVec(frame_initial.cloud_use, cluster_new.occupy_pts, new_cloud);
