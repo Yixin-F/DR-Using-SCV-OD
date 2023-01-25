@@ -60,7 +60,7 @@ int main(int argc, char** argv){
 
     std::vector<Frame> frame2Initial;
     std::vector<Pose> pose2Initial;
-    for(int k = 0; k < 5; k++){
+    for(int k = 0; k < 6; k++){
         frame2Initial.emplace_back(frames[k]);
         pose2Initial.emplace_back(pose->points[k]);
     }

@@ -945,7 +945,7 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
 }
 
 Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& poses_){
-    if(frames_.size() < 5){
+    if(frames_.size() < 6){
         ROS_WARN("not enough frames to initialize");
         return frames_.back();
     }
@@ -1024,6 +1024,47 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
         } 
         std::cout << std::endl;
     }
+
+    std::vector<int> erase_cluster_id;
+    std::unordered_map<int, std::vector<std::pair<int, std::vector<int>>>> devide_cluster;
+    for(auto& intok : initial_to_k){
+        int zero_num = 0;
+        int one_num = 0;
+        std::vector<std::pair<int, std::vector<int>>> more_vec;
+        for(auto& pair : intok.second){
+            if(pair.second.size() == 0){
+                zero_num ++;
+            }
+            else if(pair.second.size() == 1){
+                one_num ++;
+            }
+            else{
+               more_vec.emplace_back(pair);
+            }
+        }
+        if(more_vec.size() >= zero_num && more_vec.size() >= one_num){
+            devide_cluster.insert(std::make_pair(intok.first, more_vec));
+        }
+        else{
+            if(zero_num > one_num){
+                erase_cluster_id.emplace_back(intok.first);
+            }
+        }
+    }
+
+    for(auto& dc : devide_cluster){
+        std::cout << "cluster name: " << dc.first << " ";
+        for(auto& vec : dc.second){
+            std::cout << "frame: " << vec.first << " neighbor size: " << vec.second.size() << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "erase_cluster_id: " << erase_cluster_id.size() << std::endl;
+    for(auto& e : erase_cluster_id){
+        std::cout << "erase cluster name: " << e << " ";
+    }
+    
 
     return frame_initial;
 }
