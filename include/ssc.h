@@ -37,7 +37,7 @@ public:
     void downSampleAndMakeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
     void intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
     void makeHashCloud(const std::vector<PointAPRI>& apriIn_);  
-    void getVoxelCloudFromHashCloud(std::unordered_map<int, Voxel>& hashCloud_);
+    
 
     // segment
     void segment();
@@ -49,6 +49,7 @@ public:
     std::pair<pcl::PointXYZI, pcl::PointXYZI> getBoundingBoxOfCloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
     bool refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_cluster_);
     void refineClusterByIntensity(Frame& frame_ssc);
+    void getVoxelCloudFromHashCloud(std::unordered_map<int, Voxel>& hashCloud_);
     void fusionTwoClusters(Cluster& cluster1_, const Cluster& cluster2_);
     void saveSegCloud(Frame& frame_ssc, const std::string& path_, const int& id_, const std::string& name_);
 

@@ -21,6 +21,20 @@ int main(int argc, char** argv){
     // std::string path = "/home/fyx/ufo_hiahia/src/test/";
     // ssc.saveSegCloud(ssc.frame_ssc, path, ssc.id, "_seg.pcd");
 
+    // std::cout << ssc.frame_ssc.cluster_set.size() << std::endl;
+    // int count = 0;
+    // for(int i = 0; i < ssc.frame_ssc.cluster_set.size(); i++){
+    //     std::cout << ssc.frame_ssc.cluster_set[i].occupy_vcs.size() << " ";
+    //     count += ssc.frame_ssc.cluster_set[i].occupy_voxels.size();
+    // }
+    // std::cout << std::endl;
+    // std::cout << count << std::endl;
+
+    // std::cout << ssc.frame_ssc.vox_cloud->points.size() << std::endl;
+    // for(int i = 0; i < ssc.frame_ssc.vox_cloud->points.size(); i++){
+    //     std::cout << ssc.frame_ssc.vox_cloud->points[i].intensity << " ";
+    // }
+
     SSC ssc;
     std::string pose_path = "/home/fyx/ufo_final/src/dataset/session/01_session/transformations.pcd";
     std::string cloud_path = "/home/fyx/ufo_final/src/dataset/session/01_session/Scans/";
@@ -47,7 +61,6 @@ int main(int argc, char** argv){
     std::vector<Frame> frame2Initial;
     std::vector<Pose> pose2Initial;
     for(int k = 0; k < 5; k++){
-        std::cout << k << std::endl;
         frame2Initial.emplace_back(frames[k]);
         pose2Initial.emplace_back(pose->points[k]);
     }
