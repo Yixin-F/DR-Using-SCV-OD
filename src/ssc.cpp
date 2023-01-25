@@ -968,12 +968,15 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
     Eigen::Affine3f trans_initial = pcl::getTransformation(pose_initial.x, pose_initial.y, pose_initial.z, pose_initial.roll, pose_initial.pitch, pose_initial.yaw);
     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree_initial;
     kdtree_initial.setInputCloud(vox_cloud_initial);
+    
 
+    std::unordered_map<int, std::vector<std::pair<int, std::vector<int>>>> initial_to_k;
+    std::unordered_map<int, std::vector<std::pair<int, std::vector<int>>>>::iterator it_find;
     for(int k = 0; k < frames_.size(); k++){
         if(k == initial_id){
             continue;
         }
-        std::cout << "frame_k: " << k << std::endl;
+        // std::cout << "frame_k: " << k << std::endl;
         Frame frame_k = frames_[k];
         Pose pose_k = poses_[k];
         pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_k(new pcl::PointCloud<pcl::PointXYZI>());
@@ -983,7 +986,7 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
         pcl::KdTreeFLANN<pcl::PointXYZI> kdtree_k;
         kdtree_k.setInputCloud(vox_cloud_k);
 
-        std::unordered_map<int, std::vector<int>> initial_to_k;
+        // std::unordered_map<int, std::vector<int>> initial_to_k;
         for(int c = 0; c < frame_initial.cluster_set.size(); c++){
             Cluster cluster = frame_initial.cluster_set[c];
             std::vector<int> neighbor_c;
@@ -996,17 +999,30 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
                 }
             }
             sampleVec(neighbor_c);
-            std::cout << "c: " << c <<" ";
-            std::cout << "cluster.occupy_vcs.size(): " << cluster.occupy_vcs.size() << std::endl;
-            for(auto& n : neighbor_c){
-                std::cout << "n: " << n << " ";
+            // std::cout << "c: " << c <<" ";
+            // std::cout << "cluster.occupy_vcs.size(): " << cluster.occupy_vcs.size() << std::endl;
+            // for(auto& n : neighbor_c){
+            //     std::cout << "n: " << n << " ";
+            // }
+            // std::cout << std::endl;
+            it_find = initial_to_k.find(c);
+            if(it_find != initial_to_k.end()){
+                it_find->second.emplace_back(std::make_pair(k, neighbor_c));
             }
-            std::cout << std::endl;
-            initial_to_k.insert(std::make_pair(c, neighbor_c));
+            else{
+                std::vector<std::pair<int, std::vector<int>>> vec;
+                vec.emplace_back(std::make_pair(k, neighbor_c));
+                initial_to_k.insert(std::pair(c, vec));
+            }
         }
+        // std::cout << std::endl;
+    }
+    for(auto& intok : initial_to_k){
+        std::cout << "cluster: " << intok.first << " ";
+        for(auto& vec : intok.second){
+            std::cout << "frame: " << vec.first << " neighbor size: " << vec.second.size() << " ";
+        } 
         std::cout << std::endl;
-
-
     }
 
     return frame_initial;
