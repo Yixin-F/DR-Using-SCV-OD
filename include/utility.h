@@ -167,6 +167,7 @@ struct Frame{
     }
 
     int id;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;
     std::unordered_map<int, Voxel> hash_cloud;
     pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud;  // voxel cloud
     std::vector<Cluster> cluster_set;   // in the same order with center_cloud

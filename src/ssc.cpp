@@ -208,6 +208,7 @@ void SSC::intensityCalibrationByCurvature(pcl::PointCloud<pcl::PointXYZI>::Ptr& 
     // }
 
     cloud_use = cloudIn_;
+    frame_ssc.cloud_use = cloud_use;
     // ROS_DEBUG("calibrate intensity: calibrated cloud_size: %d", (int)cloud_use->points.size());
 }
 
@@ -949,6 +950,8 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
 }
 
 Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& poses_){
+    TicToc initialization_t("initialization");
+
     if(frames_.size() < 6){
         ROS_WARN("not enough frames to initialize");
         return frames_.back();
@@ -965,10 +968,12 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
     }
     std::cout << "initial_id: " << initial_id << std::endl;
 
+    std::unordered_map<int, pcl::PointCloud<pcl::PointXYZI>::Ptr> vox_clouds;
     Frame frame_initial = frames_[initial_id];
     Pose pose_initial = poses_[initial_id];
     pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud_initial(new pcl::PointCloud<pcl::PointXYZI>());
     vox_cloud_initial = frame_initial.vox_cloud;
+    vox_clouds.insert(std::make_pair(initial_id, vox_cloud_initial));
     Eigen::Affine3f trans_initial = pcl::getTransformation(pose_initial.x, pose_initial.y, pose_initial.z, pose_initial.roll, pose_initial.pitch, pose_initial.yaw);
     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree_initial;
     kdtree_initial.setInputCloud(vox_cloud_initial);
@@ -976,6 +981,7 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
 
     std::unordered_map<int, std::vector<std::pair<int, std::vector<int>>>> initial_to_k;
     std::unordered_map<int, std::vector<std::pair<int, std::vector<int>>>>::iterator it_find;
+    
     for(int k = 0; k < frames_.size(); k++){
         if(k == initial_id){
             continue;
@@ -987,6 +993,7 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
         Eigen::Affine3f trans_k = pcl::getTransformation(pose_k.x, pose_k.y, pose_k.z, pose_k.roll, pose_k.pitch, pose_k.yaw);
         Eigen::Affine3f trans = trans_initial.inverse() * trans_k;
         transformCloud(frame_k.vox_cloud, trans, vox_cloud_k);
+        vox_clouds.insert(std::make_pair(k, vox_cloud_k));
         pcl::KdTreeFLANN<pcl::PointXYZI> kdtree_k;
         kdtree_k.setInputCloud(vox_cloud_k);
 
@@ -1070,11 +1077,56 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
     }
 
     for(auto& dc : devide_cluster){
-        std::cout << "devide: " << dc.first << std::endl;
+        erase_cluster_id.emplace_back(dc.first);
+        std::sort(dc.second.begin(), dc.second.end(), sort1);
+        int frame_ref = dc.second[0].first;
+        std::vector<int> cluster_ref = dc.second[0].second;
+        std::cout << "devide cluster: " << dc.first << " refer to frame: " << frame_ref << std::endl;
+        std::vector<std::vector<int>> devided_vox;
+        for(auto& d : cluster_ref){
+            std::vector<int> ref_vox;
+            for(int k =0; k < frames_[frame_ref].cluster_set[d].occupy_vcs.size(); k++){
+                std::vector<int> c_id;
+                std::vector<float> c_dis;
+                kdtree_initial.nearestKSearch(vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]], 1, c_id, c_dis);
+                if(vox_cloud_initial->points[c_id[0]].intensity != -1){
+                    ref_vox.emplace_back(c_id[0]);
+                }
+            }
+            sampleVec(ref_vox);   // TODO: chong fu de voxel !!
+            devided_vox.emplace_back(ref_vox);
+        }
         
+        for(auto& nv : devided_vox){
+            Cluster cluster_new;
+            cluster_new.occupy_vcs = nv;
+            for(auto& p : nv){
+                pcl::PointXYZI v_pt = vox_cloud_initial->points[p];
+                float dis = pointDistance2d(v_pt);
+                int r_id = std::ceil((dis - min_dis) / range_res) - 1;
+                float angle = getPolarAngle(v_pt);
+                int s_id = std::ceil((angle - min_angle) / sector_res) - 1;
+                float azimuth = getAzimuth(v_pt);
+                int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
+                int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
+                addVec(cluster_new.occupy_pts, frame_initial.hash_cloud[v_id].ptIdx);
+            }
+            pcl::PointCloud<pcl::PointXYZI>::Ptr new_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+            getCloudByVec(frame_initial.cloud_use, cluster_new.occupy_pts, new_cloud);
+            cluster_new.cloud = new_cloud;
+
+            frame_initial.cluster_set.emplace_back(cluster_new);
+        }
     }
 
-    
+    std::vector<Cluster> cluster_set_tmp;
+    for(int i = 0; i < frame_initial.cluster_set.size(); i++){
+        if(!findNameInVec(i, erase_cluster_id)){
+            cluster_set_tmp.emplace_back(frame_initial.cluster_set[i]);
+        }
+    }
+    frame_initial.cluster_set.swap(cluster_set_tmp);
+    ROS_DEBUG("frame initialization: time_use(ms): %0.2f, frame name: %d, cluster num: %d", (float)initialization_t.toc(), initial_id, (int)frame_initial.cluster_set.size());
 
     return frame_initial;
 }

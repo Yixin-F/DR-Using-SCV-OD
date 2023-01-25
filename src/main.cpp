@@ -38,6 +38,7 @@ int main(int argc, char** argv){
     SSC ssc;
     std::string pose_path = "/home/fyx/ufo_final/src/dataset/session/01_session/transformations.pcd";
     std::string cloud_path = "/home/fyx/ufo_final/src/dataset/session/01_session/Scans/";
+    std::string path = "/home/fyx/ufo_hiahia/src/test/";
     pcl::PointCloud<Pose>::Ptr pose(new pcl::PointCloud<Pose>());
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_vec;
     ssc.getPose(pose, pose_path);
@@ -49,7 +50,6 @@ int main(int argc, char** argv){
         ssc.process(cloud_vec[i]);
         ssc.segment();
         ssc.recognize();
-        std::string path = "/home/fyx/ufo_hiahia/src/test/";
         ssc.saveSegCloud(ssc.frame_ssc, path, ssc.id, "_seg.pcd");
         frames.emplace_back(ssc.frame_ssc);
         poses.emplace_back(pose->points[i]);
@@ -66,6 +66,7 @@ int main(int argc, char** argv){
     }
     std::cout << "start initialization" << std::endl;
     Frame frame_initial = ssc.intialization(frame2Initial, pose2Initial);
+    ssc.saveSegCloud(frame_initial, path, ssc.id, "_seg.pcd");
 
     ros::spin();
 
