@@ -21,6 +21,10 @@ bool fileSort(std::string name1_, std::string name2_){  // filesort by name
     return std::stoi(name1) < std::stoi(name2);
 }
 
+bool sort1(const std::pair<int, std::vector<int>>& pair1_, const std::pair<int, std::vector<int>>& pair2_){
+    return pair1_.second.size() <= pair2_.second.size();
+}
+
 int SSC::id = 0;
 
 SSC::~SSC() {}
@@ -952,9 +956,9 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
 
     // get initial frame
     int initial_id;
-    int max_num = 0;
-    for(int i = 2; i < frames_.size() - 1; i++){
-        if(frames_[i].cluster_set.size() >= max_num){
+    int max_num = 999999;
+    for(int i = 1; i < frames_.size() - 1; i++){
+        if(frames_[i].cluster_set.size() <= max_num){
             max_num = frames_[i].cluster_set.size();
             initial_id = i;
         }
@@ -1062,8 +1066,14 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
 
     std::cout << "erase_cluster_id: " << erase_cluster_id.size() << std::endl;
     for(auto& e : erase_cluster_id){
-        std::cout << "erase cluster name: " << e << " ";
+        std::cout  << e << " ";
     }
+
+    for(auto& dc : devide_cluster){
+        std::cout << "devide: " << dc.first << std::endl;
+        
+    }
+
     
 
     return frame_initial;
