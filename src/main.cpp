@@ -64,9 +64,12 @@ int main(int argc, char** argv){
         frame2Initial.emplace_back(frames[k]);
         pose2Initial.emplace_back(pose->points[k]);
     }
-    std::cout << "start initialization" << std::endl;
-    Frame frame_initial = ssc.intialization(frame2Initial, pose2Initial);
-    ssc.saveSegCloud(frame_initial, path, ssc.id, "_seg.pcd");
+    // std::cout << "start initialization" << std::endl;
+    // Frame frame_initial = ssc.intialization(frame2Initial, pose2Initial);
+    // ssc.saveSegCloud(frame_initial, path, ssc.id, "_seg.pcd");
+
+    ssc.tracking(frame2Initial[3], frame2Initial[4], pose2Initial[3], pose2Initial[4]);
+    ssc.saveSegCloud(frame2Initial[3], path, ssc.id, "_seg.pcd");
 
     ros::spin();
 

@@ -548,22 +548,20 @@ void SSC::saveSegCloud(Frame& frame_ssc, const std::string& path_, const int& id
     int count = 0;
     for(auto& c : frame_ssc.cluster_set){
         int r, g, b;
-        // if(c.state == -1){  // no state is black
-        if(0){  
-            r = 0.f;
-            g = 0.f;
-            b = 0.f;
-        }
-        else if(c.state == 1){  // dynamic is red
+        if(c.state == 1){  // dynamic is red
             r = 255.f;
             g = 0.f;
             b = 0.f;
         }
         else{
-            if(1){
+            if(c.type == car || c.type == other){
                 r = rng.uniform(20, 150);   // car is random color
                 g = rng.uniform(20, 200); 
                 b = rng.uniform(20, 200); 
+                // r = c.color[0];
+                // g = c.color[1];
+                // b = c.color[2];
+
             }
             else if(c.type == building){  // building is
                 r = 0.f;
@@ -875,7 +873,7 @@ void SSC::recognize(){
                 c.type = tree;
                 c.feature_matrix = f_11;
             }
-            else if(f_11(0, 8) <= height && f_11(0, 9) <= 0){
+            else if(f_11(0, 9) <= height && f_11(0, 9) <= -(sensor_height / 2)){
                 f_11(0, 10) = (double)car;
                 c.type = car;
                 c.feature_matrix = f_11;
@@ -916,33 +914,40 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
     Eigen::Affine3f trans_next = pcl::getTransformation(pose_next_.x, pose_next_.y, pose_next_.z, pose_next_.roll, pose_next_.pitch, pose_next_.yaw);
     Eigen::Affine3f trans = trans_pre.inverse() * trans_next;
     transformCloud(frame_next_.vox_cloud, trans, vox_cloud_next);
+    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree_next;
+    kdtree_next.setInputCloud(vox_cloud_next);
 
     std::unordered_map<int, std::vector<int>> pre_to_next;
     for(int i = 0; i < frame_pre_.cluster_set.size(); i++){
         // std::cout << "i: " << i << std::endl;
         std::vector<int> neighbor_cluster;
-        for(auto& v : frame_pre_.cluster_set[i].occupy_voxels){
+        for(auto& v : frame_pre_.cluster_set[i].occupy_vcs){
             std::unordered_map<int, Voxel>::iterator it_find;
-            int cloud_id = frame_pre_.hash_cloud[v].voxel_cloud_id;
-            pcl::PointXYZI v_pt = frame_pre_.vox_cloud->points[cloud_id];
-            float dis = pointDistance2d(v_pt);
-            int r_id = std::ceil((dis - min_dis) / range_res) - 1;
-            float angle = getPolarAngle(v_pt);
-            int s_id = std::ceil((angle - min_angle) / sector_res) - 1;
-            float azimuth = getAzimuth(v_pt);
-            int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
-            int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
+            pcl::PointXYZI v_pt = frame_pre_.vox_cloud->points[v];
+            std::vector<int> c_id;
+            std::vector<float> c_dis;
+            kdtree_next.radiusSearch(v_pt, 0.3, c_id, c_dis);
+            // float dis = pointDistance2d(v_pt);
+            // int r_id = std::ceil((dis - min_dis) / range_res) - 1;
+            // float angle = getPolarAngle(v_pt);
+            // int s_id = std::ceil((angle - min_angle) / sector_res) - 1;
+            // float azimuth = getAzimuth(v_pt);
+            // int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
+            // int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
             
-            it_find = frame_next_.hash_cloud.find(v_id);
-            if(it_find == frame_next_.hash_cloud.end()){
-                continue;
-            }
+            // it_find = frame_next_.hash_cloud.find(v_id);
+            // if(it_find == frame_next_.hash_cloud.end()){
+            //     continue;
+            // }
             // std::cout << "cloud_id: " << cloud_id << " ";
             // std::cout << "v_id: " << v_id << " ";
-            if(frame_next_.hash_cloud[v_id].label == -1){
-                continue;
+            for(auto& id : c_id){
+                if(frame_next_.hash_cloud[vox_cloud_next->points[id].intensity].label == -1){
+                    continue;
+                }
+                neighbor_cluster.emplace_back(frame_next_.hash_cloud[vox_cloud_next->points[id].intensity].label);
             }
-            neighbor_cluster.emplace_back(frame_next_.hash_cloud[v_id].label);
+            
         }
         sampleVec(neighbor_cluster);
         // for(auto& n : neighbor_cluster){
@@ -950,6 +955,57 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
         // }
         pre_to_next.insert(std::make_pair(i, neighbor_cluster));
         // std::cout << std::endl;
+    }
+
+    // for(auto& pre : pre_to_next){
+    //     std::cout << "pre cluster: " << pre.first << " ";
+    //     for(auto& n : pre.second){
+    //         std::cout << "neighbor cluster: " << n << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    for(auto& pton : pre_to_next){
+        // std::cout << frame_pre_.cluster_set[pton.first].type << std::endl;
+        if(frame_pre_.cluster_set[pton.first].type != car && (frame_pre_.cluster_set[pton.first].type != other)){
+            continue;
+        }
+
+        if(pton.second.size()  == 0){
+            // std::cout << "dynamic" << std::endl;
+            frame_pre_.cluster_set[pton.first].state = 1;
+        }
+        else{
+            if(pton.second.size()  == 1 && (frame_next_.cluster_set[pton.second[0]].type == car || frame_next_.cluster_set[pton.second[0]].type == other)){
+                frame_pre_.cluster_set[pton.first].state = 0;
+                frame_next_.cluster_set[pton.second[0]].color[0] = frame_pre_.cluster_set[pton.first].color[0];
+                frame_next_.cluster_set[pton.second[0]].color[1] = frame_pre_.cluster_set[pton.first].color[1];
+                frame_next_.cluster_set[pton.second[0]].color[2] = frame_pre_.cluster_set[pton.first].color[2];
+                frame_next_.cluster_set[pton.second[0]].type = car;
+            }
+            else if(pton.second.size()  == 1 && (frame_next_.cluster_set[pton.second[0]].type == tree)){
+                frame_pre_.cluster_set[pton.first].state = 0;
+                frame_pre_.cluster_set[pton.first].type = tree;
+            }
+            else if(pton.second.size()  == 1 && (frame_next_.cluster_set[pton.second[0]].type == building)){
+                frame_pre_.cluster_set[pton.first].state = 0;
+                frame_pre_.cluster_set[pton.first].type = tree;
+            }
+            else if(pton.second.size() > 1){
+                for(auto& n : pton.second){
+                    if(frame_next_.cluster_set[n].type == car || frame_next_.cluster_set[n].type == other){
+                        frame_next_.cluster_set[n].type == car;
+                        frame_pre_.cluster_set[pton.first].state = 0;
+                        frame_next_.cluster_set[n].color[0] = frame_pre_.cluster_set[pton.first].color[0];
+                        frame_next_.cluster_set[n].color[1] = frame_pre_.cluster_set[pton.first].color[1];
+                        frame_next_.cluster_set[n].color[2] = frame_pre_.cluster_set[pton.first].color[2];
+                    }
+                    else if(frame_next_.cluster_set[n].type == tree || frame_next_.cluster_set[n].type == building){
+                        continue;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1102,6 +1158,7 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
             sampleVec(ref_vox);   // TODO: chong fu de voxel !!
 
             cluster_new.occupy_vcs = ref_vox;
+            cluster_new.type = frames_[frame_ref].cluster_set[d].type;
             pcl::PointCloud<pcl::PointXYZI>::Ptr new_cloud(new pcl::PointCloud<pcl::PointXYZI>());
             Eigen::Affine3f trans_k = pcl::getTransformation(poses_[frame_ref].x, poses_[frame_ref].y, poses_[frame_ref].z, poses_[frame_ref].roll, poses_[frame_ref].pitch, poses_[frame_ref].yaw);
             Eigen::Affine3f trans = trans_initial.inverse() * trans_k;

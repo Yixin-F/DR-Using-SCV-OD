@@ -46,7 +46,7 @@ ssc:
   correct_radius_: 0.3
   search_num_: 10
 
-  toBeClass_: 8  # the min numbers of points to be one class
+  toBeClass_: 5  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
   intensity_diff_: 3.0
   intensity_cov_: 2.0
