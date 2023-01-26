@@ -1085,66 +1085,28 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
         std::sort(dc.second.begin(), dc.second.end(), sort1);
         int frame_ref = dc.second[0].first;
         std::vector<int> cluster_ref = dc.second[0].second;
-        std::cout << "devide cluster: " << dc.first << " refer to frame: " << frame_ref << std::endl;
-        std::vector<std::vector<int>> devided_vox;
+        std::cout << "cluster: " << dc.first << " refer to frame: " << frame_ref << " is devided into: " << cluster_ref.size() << std::endl;
         for(auto& d : cluster_ref){
+            Cluster cluster_new;
             std::vector<int> ref_vox;
             for(int k =0; k < frames_[frame_ref].cluster_set[d].occupy_vcs.size(); k++){
                 std::vector<int> c_id;
                 std::vector<float> c_dis;
-                // kdtree_initial.nearestKSearch(vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]], 1, c_id, c_dis);
-                // if(vox_cloud_initial->points[c_id[0]].intensity != -1){
-                //     ref_vox.emplace_back(c_id[0]);
-                // }
-                kdtree_initial.nearestKSearch(vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]], 2, c_id, c_dis);
+                kdtree_initial.radiusSearch(vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]], 0.4, c_id, c_dis);
                 for(auto& id : c_id){
                     if(frame_initial.hash_cloud[vox_cloud_initial->points[id].intensity].label != -1){
                         ref_vox.emplace_back(id);
                     }
                 }
-                // pcl::PointXYZI v_pt = vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]];
-                // float dis = pointDistance2d(v_pt);
-                // int r_id = std::ceil((dis - min_dis) / range_res) - 1;
-                // float angle = getPolarAngle(v_pt);
-                // int s_id = std::ceil((angle - min_angle) / sector_res) - 1;
-                // float azimuth = getAzimuth(v_pt);
-                // int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
-                // int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
-
-                // ref_vox.emplace_back(frame_initial.hash_cloud[v_id].voxel_cloud_id);
             }
             sampleVec(ref_vox);   // TODO: chong fu de voxel !!
-            devided_vox.emplace_back(ref_vox);
-        }
 
-        std::sort(devided_vox.begin(), devided_vox.end(), sort2);
-        std::vector<int> vec_tmp = frame_initial.cluster_set[dc.first].occupy_vcs;
-        std::cout << "frame_initial.cluster_set[dc.first].occupy_vcs:" << frame_initial.cluster_set[dc.first].occupy_vcs.size() << std::endl;
-        for(int t = 0; t < devided_vox.size() - 1; t++){
-            std::cout << devided_vox[t].size() << " ";
-            reduceVec(vec_tmp, devided_vox[t]);
-        }
-        devided_vox.back() = vec_tmp;
-        std::cout << devided_vox.back().size() << std::endl;
-
-        for(auto& nv : devided_vox){
-            Cluster cluster_new;
-            cluster_new.occupy_vcs = nv;
-            for(auto& p : nv){
-                pcl::PointXYZI v_pt = vox_cloud_initial->points[p];
-                // float dis = pointDistance2d(v_pt);
-                // int r_id = std::ceil((dis - min_dis) / range_res) - 1;
-                // float angle = getPolarAngle(v_pt);
-                // int s_id = std::ceil((angle - min_angle) / sector_res) - 1;
-                // float azimuth = getAzimuth(v_pt);
-                // int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
-                // int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
-                addVec(cluster_new.occupy_pts, frame_initial.hash_cloud[v_pt.intensity].ptIdx);  // TODO: ??
-            }
+            cluster_new.occupy_vcs = ref_vox;
             pcl::PointCloud<pcl::PointXYZI>::Ptr new_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-            getCloudByVec(frame_initial.cloud_use, cluster_new.occupy_pts, new_cloud);
+            Eigen::Affine3f trans_k = pcl::getTransformation(poses_[frame_ref].x, poses_[frame_ref].y, poses_[frame_ref].z, poses_[frame_ref].roll, poses_[frame_ref].pitch, poses_[frame_ref].yaw);
+            Eigen::Affine3f trans = trans_initial.inverse() * trans_k;
+            transformCloud(frames_[frame_ref].cluster_set[d].cloud, trans, new_cloud);
             cluster_new.cloud = new_cloud;
-
             frame_initial.cluster_set.emplace_back(cluster_new);
         }
     }
@@ -1156,6 +1118,90 @@ Frame SSC::intialization(std::vector<Frame>& frames_, const std::vector<Pose>& p
         }
     }
     frame_initial.cluster_set.swap(cluster_set_tmp);
+    
+    for(int i = 0; i < frame_initial.cluster_set.size(); i++){
+        for(auto& v : frame_initial.cluster_set[i].occupy_voxels){
+            frame_initial.hash_cloud[v].label = i;
+        }
+    }
+
+
+    // for(auto& dc : devide_cluster){
+    //     erase_cluster_id.emplace_back(dc.first);
+    //     std::sort(dc.second.begin(), dc.second.end(), sort1);
+    //     int frame_ref = dc.second[0].first;
+    //     std::vector<int> cluster_ref = dc.second[0].second;
+    //     std::cout << "devide cluster: " << dc.first << " refer to frame: " << frame_ref << std::endl;
+    //     std::vector<std::vector<int>> devided_vox;
+    //     for(auto& d : cluster_ref){
+    //         std::vector<int> ref_vox;
+    //         for(int k =0; k < frames_[frame_ref].cluster_set[d].occupy_vcs.size(); k++){
+    //             std::vector<int> c_id;
+    //             std::vector<float> c_dis;
+    //             // kdtree_initial.nearestKSearch(vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]], 1, c_id, c_dis);
+    //             // if(vox_cloud_initial->points[c_id[0]].intensity != -1){
+    //             //     ref_vox.emplace_back(c_id[0]);
+    //             // }
+    //             kdtree_initial.radiusSearch(vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]], 0.8, c_id, c_dis);
+    //             for(auto& id : c_id){
+    //                 if(frame_initial.hash_cloud[vox_cloud_initial->points[id].intensity].label != -1){
+    //                     ref_vox.emplace_back(id);
+    //                 }
+    //             }
+    //             // pcl::PointXYZI v_pt = vox_clouds[frame_ref]->points[frames_[frame_ref].cluster_set[d].occupy_vcs[k]];
+    //             // float dis = pointDistance2d(v_pt);
+    //             // int r_id = std::ceil((dis - min_dis) / range_res) - 1;
+    //             // float angle = getPolarAngle(v_pt);
+    //             // int s_id = std::ceil((angle - min_angle) / sector_res) - 1;
+    //             // float azimuth = getAzimuth(v_pt);
+    //             // int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
+    //             // int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
+
+    //             // ref_vox.emplace_back(frame_initial.hash_cloud[v_id].voxel_cloud_id);
+    //         }
+    //         sampleVec(ref_vox);   // TODO: chong fu de voxel !!
+    //         devided_vox.emplace_back(ref_vox);
+    //     }
+
+    //     std::sort(devided_vox.begin(), devided_vox.end(), sort2);
+    //     std::vector<int> vec_tmp = frame_initial.cluster_set[dc.first].occupy_vcs;
+    //     std::cout << "frame_initial.cluster_set[dc.first].occupy_vcs:" << frame_initial.cluster_set[dc.first].occupy_vcs.size() << std::endl;
+    //     for(int t = 0; t < devided_vox.size() - 1; t++){
+    //         std::cout << devided_vox[t].size() << " ";
+    //         reduceVec(vec_tmp, devided_vox[t]);
+    //     }
+    //     devided_vox.back() = vec_tmp;
+    //     std::cout << devided_vox.back().size() << std::endl;
+
+    //     for(auto& nv : devided_vox){
+    //         Cluster cluster_new;
+    //         cluster_new.occupy_vcs = nv;
+    //         for(auto& p : nv){
+    //             pcl::PointXYZI v_pt = vox_cloud_initial->points[p];
+    //             // float dis = pointDistance2d(v_pt);
+    //             // int r_id = std::ceil((dis - min_dis) / range_res) - 1;
+    //             // float angle = getPolarAngle(v_pt);
+    //             // int s_id = std::ceil((angle - min_angle) / sector_res) - 1;
+    //             // float azimuth = getAzimuth(v_pt);
+    //             // int a_id = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
+    //             // int v_id = a_id * range_num * sector_num + r_id * sector_num + s_id;
+    //             addVec(cluster_new.occupy_pts, frame_initial.hash_cloud[v_pt.intensity].ptIdx);  // TODO: ??
+    //         }
+    //         pcl::PointCloud<pcl::PointXYZI>::Ptr new_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    //         getCloudByVec(frame_initial.cloud_use, cluster_new.occupy_pts, new_cloud);
+    //         cluster_new.cloud = new_cloud;
+
+    //         frame_initial.cluster_set.emplace_back(cluster_new);
+    //     }
+    // }
+
+    // std::vector<Cluster> cluster_set_tmp;
+    // for(int i = 0; i < frame_initial.cluster_set.size(); i++){
+    //     if(!findNameInVec(i, erase_cluster_id)){
+    //         cluster_set_tmp.emplace_back(frame_initial.cluster_set[i]);
+    //     }
+    // }
+    // frame_initial.cluster_set.swap(cluster_set_tmp);
     ROS_DEBUG("frame initialization: time_use(ms): %0.2f, frame name: %d, cluster num: %d", (float)initialization_t.toc(), initial_id, (int)frame_initial.cluster_set.size());
 
     return frame_initial;
