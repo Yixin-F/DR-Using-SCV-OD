@@ -13,6 +13,13 @@ public:
     int azimuth_num;
     int bin_num;
 
+    std::string calib_save;
+    std::string seg_save;
+    std::string map_save;
+
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_vec;
+    std::vector<Pose> pose_vec;
+
     std::vector<PointAPRI> apri_vec;
     std::unordered_map<int, Voxel> hash_cloud;
     Frame frame_ssc;
@@ -34,11 +41,10 @@ public:
     void process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);
     pcl::PointCloud<pcl::PointXYZI>::Ptr extractGroudByPatchWork(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);  // extract ground by pathwork
     void intensityCalibrationByCurvature(pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_);  // calibrate point by intensity by curvature
-    void downSampleAndMakeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_down_, float leaf_size_);
+    void makeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
     void intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
     void makeHashCloud(const std::vector<PointAPRI>& apriIn_);  
     
-
     // segment
     void segment();
     void clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::unordered_map<int, Voxel>& hash_cloud_);
@@ -50,8 +56,7 @@ public:
     bool refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_cluster_);
     void refineClusterByIntensity(Frame& frame_ssc);
     void getVoxelCloudFromHashCloud(std::unordered_map<int, Voxel>& hashCloud_);
-    void fusionTwoClusters(Cluster& cluster1_, const Cluster& cluster2_);
-    void saveSegCloud(Frame& frame_ssc, const std::string& path_, const int& id_, const std::string& name_);
+    void saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
 
     // feature recognize
     void recognize();
@@ -60,16 +65,15 @@ public:
     Eigen::MatrixXd getFeature21(const Eigen::MatrixXd& eigenvalue_matrix_, const Eigen::MatrixXd& ensembleshape_matrix_);
     bool regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
     
-
     // dynamic detect
     void removert();
-    Frame intialization(std::vector<Frame>& frames_, const std::vector<Pose>& poses_);
+    Frame intialization(const std::vector<Frame>& frames_, const std::vector<Pose>& poses_);
     void tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
     float compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixXd& feature2_);
 
     // tool
-    void getPose(pcl::PointCloud<Pose>::Ptr& pose_, const std::string& pose_path_);
-    void getCloud(std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr>& cloud_vec_, const std::string& cloud_path_);
+    void getPose();
+    void getCloud();
 
 };
 

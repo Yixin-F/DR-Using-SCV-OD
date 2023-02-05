@@ -112,8 +112,8 @@ struct Voxel{
     int azimuth_idx;
     int label = -1;
     int voxel_cloud_id;
-    std::vector<int> ptIdx;  // the vector of id in noground cloud
     pcl::PointXYZI center;   // the point center's intensity is its id in voxel cloud
+    std::vector<int> ptIdx;  // the vector of id in noground cloud
     std::vector<float> intensity_record;
     float intensity_av = 0.f;
     float intensity_cov = 0.f;
@@ -141,9 +141,16 @@ struct Feature{
 
 // one cluster
 struct Cluster{
-    Cluster() {}
+    Cluster(){
+        allocateMemory();
+    }
     ~Cluster() {}
     
+    void allocateMemory(){
+        cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    }
+
+    int track_id = -1;
     int name = -1;  // tracking
     int type = -1;  // building, tree, car, other
     int state = - 1;   //  dynamic 1, static 0 
@@ -153,7 +160,6 @@ struct Cluster{
     std::vector<int> occupy_vcs; // id in voxel cloud
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud;
     Eigen::MatrixXd feature_matrix;
-    Pose pose;
 };
 
 // one frame
@@ -164,13 +170,16 @@ struct Frame{
     ~Frame() {}
     void allocateMemory(){
         vox_cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
+        cloud_use.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
 
     int id;
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;
     std::unordered_map<int, Voxel> hash_cloud;
     pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud;  // voxel cloud
-    std::vector<Cluster> cluster_set;   // in the same order with center_cloud
+    std::unordered_map<int, Cluster> cluster_set;
+    // std::vector<Cluster> cluster_set;   // in the same order with center_cloud
+    Pose pose;
 };
 
 class Utility{
@@ -179,24 +188,18 @@ public:
     int kNumOmpCores;
     bool save;
     bool mapping_init;
-    float downsample_size;
 
-    std::string bin_path_1;
-    std::string pcd_path_1;
-    std::string pose_path_1;
-    std::string out_path_1;
-    std::string bin_path_2;
-    std::string pcd_path_2;
-    std::string pose_path_2;
-    std::string out_path_2;
+    std::string data_path;
+    std::string label_path;
+    std::string pose_path;
+    int init;
+    int start;
+    int end;
 
-    std::string segment_path_1;
-    std::string segment_path_2;
-    std::string relo_path_1;
-    std::string relo_path_2;
-    std::string map_path_1;
-    std::string map_path_2;
-
+    std::string calib_path;
+    std::string seg_path;
+    std::string map_path;
+ 
     float sensor_height;
     float min_dis;
     float max_dis;
@@ -213,6 +216,7 @@ public:
     float correct_radius;
     int search_num;
 
+    int iteration;
     int toBeClass;
     int search_c;
     float intensity_diff;
@@ -246,23 +250,17 @@ public:
         nh.param<int>("common/kNumOmpCores_", kNumOmpCores, 6);
         nh.param<bool>("common/save_", save, true);
         nh.param<bool>("common/mapping_init_", mapping_init, false);
-        nh.param<float>("common/downsample_size_", downsample_size, 0.1);
 
-        nh.param<std::string>("session/bin_path_1_", bin_path_1, " ");
-        nh.param<std::string>("session/pcd_path_1_", pcd_path_1, " ");
-        nh.param<std::string>("session/pose_path_1_", pose_path_1, " ");
-        nh.param<std::string>("session/out_path_1_", out_path_1, " ");
-        nh.param<std::string>("session/bin_path_2_", bin_path_2, " ");
-        nh.param<std::string>("session/pcd_path_2_", pcd_path_2, " ");
-        nh.param<std::string>("session/pose_path_2_", pose_path_2,  " ");
-        nh.param<std::string>("session/out_path_2_", out_path_2, " ");
+        nh.param<std::string>("session/data_path_", data_path, " ");
+        nh.param<std::string>("session/label_path_", label_path, " ");
+        nh.param<std::string>("session/pose_path_", pose_path, " ");
+        nh.param<int>("session/init_", init, 5);
+        nh.param<int>("session/start_", start, 5);
+        nh.param<int>("session/end_", end, 50);
 
-        nh.param<std::string>("ssc/segment_path_1_", segment_path_1, " ");
-        nh.param<std::string>("ssc/segment_path_2_", segment_path_2, " ");
-        nh.param<std::string>("ssc/relo_path_1_", relo_path_1, " ");
-        nh.param<std::string>("ssc/relo_path_2_", relo_path_2, " ");
-        nh.param<std::string>("ssc/map_path_1_", map_path_1, " ");
-        nh.param<std::string>("ssc/map_path_2_", map_path_2, " ");
+        nh.param<std::string>("ssc/calib_path_", calib_path, " ");
+        nh.param<std::string>("ssc/seg_path_", seg_path, " ");
+        nh.param<std::string>("ssc/map_path_", map_path, " ");
 
         nh.param<float>("ssc/sensor_height_", sensor_height, 2.0);
         nh.param<float>("ssc/min_dis_", min_dis, 0.0);
@@ -278,6 +276,7 @@ public:
         nh.param<float>("ssc/correct_radius_", correct_radius, 0.5);
         nh.param<float>("ssc/correct_ratio_", correct_ratio, 0.5);
         nh.param<int>("ssc/search_num_", search_num, 10);
+        nh.param<int>("ssc/iteration_", iteration, 3);
         nh.param<int>("ssc/toBeClass_", toBeClass, 1);
         nh.param<int>("ssc/search_c_", search_c, 2);
         nh.param<float>("ssc/intensity_diff_", intensity_diff, 50);
@@ -302,8 +301,6 @@ public:
     }
 
     void fsmkdir(std::string _path){
-        // if(fs::exists(_path))
-        //     fs::remove(_path);   // remove old
         if(!fs::is_directory(_path) || !fs::exists(_path)) 
             fs::create_directories(_path);   // restore new
     } 
@@ -387,11 +384,22 @@ public:
         std::string save_path = path_ + std::to_string(id) + name_;
         cloud_->height = 1;
         cloud_->width = cloud_->points.size();
-        if(1){
+        if(save){
             if(cloud_->points.size() == 0 || pcl::io::savePCDFile(save_path, *cloud_) == -1){
                 ROS_WARN("%s save error ", (std::to_string(id) + name_).c_str());
             }
             ROS_DEBUG("cloud save: %s save success, pt_num: %d", save_path.c_str(), (int)cloud_->points.size());
+        }
+    }
+
+    template<typename CloudT>
+    void loadCloud(CloudT& cloud_, const std::string& path_){
+        if(pcl::io::loadPCDFile(path_, *cloud_) == -1){
+            ROS_WARN("pose file %s load error", path_.c_str());
+            ROS_BREAK();
+        }
+        else{
+            ROS_DEBUG("cloud load: %s load success, pt_num: %d", path_.c_str(), (int)cloud_->points.size());
         }
     }
 

@@ -1,30 +1,21 @@
 common:
-  out_path_: "/home/fyx/ufo_final/src/dataset"
+  out_path_: "/home/fyx/ufo_hiahia/src/out/"
   kNumOmpCores_: 8   # cores
   save_: true
   mapping_init_: false
-  downsample_size_: 0.08
 
 session:
-  # session 1
-  bin_path_1_: "/session/01_session/Bins/"
-  pcd_path_1_: "/session/01_session/Scans/"
-  pose_path_1_: "/session/01_session/transformations.pcd"
-  out_path_1_: "/session/01_session/Scans3Seg/"
-
-  # session 2
-  bin_path_2_: "/session/02_session/Bins/"
-  pcd_path_2_: "/session/02_session/Scans/"
-  pose_path_2_: "/session/02_session/transformations.pcd"
-  out_path_2_: "/session/02_session/Scans3Seg/"
+  data_path_: "/home/fyx/ufo_hiahia/src/in/scans/"
+  label_path_: "/home/fyx/ufo_hiahia/src/in/labels/"
+  pose_path_: "/home/fyx/ufo_hiahia/src/in/transformations.pcd"
+  init_: 5   # the num of frame to initialize
+  start_: 5  # the start index in dataset, please check it
+  end_: 20
 
 ssc:
-  segment_path_1_: "/ssc/01_session/segment/"
-  segment_path_2_: "/ssc/02_session/segment/"
-  relo_path_1_: "/ssc/01_session/relomat/"
-  relo_path_2_: "/ssc/02_session/relomat/"
-  map_path_1_: "/ssc/01_session/semantic_map/"
-  map_path_2_: "/ssc/02_session/semantic_map/"
+  calib_path_: "calib/"
+  seg_path_: "seg/"
+  map_path_: "map/"
 
   sensor_height_: 2.5
 
@@ -37,20 +28,21 @@ ssc:
   min_azimuth_: -30.0  # /deg
   max_azimuth_: 60.0
 
-  range_res_: 0.2
+  range_res_: 0.3
   sector_res_: 1.0
   azimuth_res_: 2.0
 
-  max_intensity_: 200.0  # intenisty calibration
+  max_intensity_: 255.0  # intenisty calibration
   correct_ratio_: 0.5
   correct_radius_: 0.3
   search_num_: 10
 
+  iteration_: 3
   toBeClass_: 5  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
   intensity_diff_: 3.0
   intensity_cov_: 2.0
-  occupancy_: 0.6
+  occupancy_: 0.8
 
   building_: 0  # cluster map
   tree_: 1

@@ -9,13 +9,13 @@ int main(int argc, char** argv){
     pcl::PointCloud<pcl::PointXYZI>::Ptr test(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::io::loadPCDFile("/home/fyx/ufo_hiahia/src/test/000179.pcd", *test);
 
-    // // ssc test: 2023.1.12 start ~2023.1.17
-    // SSC ssc;
+    // ssc test: 2023.1.12 start ~2023.1.17
+    SSC ssc;
 
-    // ssc.process(test);
+    ssc.process(test);
     // ssc.intensityVisualization(ssc.cloud_use);
 
-    // ssc.segment();
+    ssc.segment();
 
     // ssc.recognize();
     // std::string path = "/home/fyx/ufo_hiahia/src/test/";
@@ -35,41 +35,53 @@ int main(int argc, char** argv){
     //     std::cout << ssc.frame_ssc.vox_cloud->points[i].intensity << " ";
     // }
 
-    SSC ssc;
-    std::string pose_path = "/home/fyx/ufo_final/src/dataset/session/01_session/transformations.pcd";
-    std::string cloud_path = "/home/fyx/ufo_final/src/dataset/session/01_session/Scans/";
-    std::string path = "/home/fyx/ufo_hiahia/src/test/";
-    pcl::PointCloud<Pose>::Ptr pose(new pcl::PointCloud<Pose>());
-    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_vec;
-    ssc.getPose(pose, pose_path);
-    ssc.getCloud(cloud_vec, cloud_path);
+    // SSC ssc;
+    // std::string pose_path = "/home/fyx/ufo_final/src/dataset/session/01_session/transformations.pcd";
+    // std::string cloud_path = "/home/fyx/ufo_final/src/dataset/session/01_session/Scans/";
+    // std::string path = "/home/fyx/ufo_hiahia/src/test/";
+    // pcl::PointCloud<Pose>::Ptr pose(new pcl::PointCloud<Pose>());
+    // std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_vec;
+    // ssc.getPose(pose, pose_path);
+    // ssc.getCloud(cloud_vec, cloud_path);
 
-    std::vector<Frame> frames;
-    std::vector<Pose> poses;
-    for(int i = 0; i < 6; i++){
-        ssc.process(cloud_vec[i]);
-        ssc.segment();
-        ssc.recognize();
-        ssc.saveSegCloud(ssc.frame_ssc, path, ssc.id, "_seg.pcd");
-        frames.emplace_back(ssc.frame_ssc);
-        poses.emplace_back(pose->points[i]);
-        ssc.reset();
-        ssc.id ++;
-        std::cout << std::endl;
-    }
+    // std::vector<Frame> frames;
+    // std::vector<Pose> poses;
+    // for(int i = 0; i < cloud_vec.size(); i++){
+    //     ssc.process(cloud_vec[i]);
+    //     ssc.segment();
+    //     ssc.recognize();
+    //     ssc.saveSegCloud(ssc.frame_ssc, path, ssc.id, "_seg.pcd");
+    //     frames.emplace_back(ssc.frame_ssc);
+    //     poses.emplace_back(pose->points[i]);
+    //     ssc.reset();
+    //     ssc.id ++;
+    //     std::cout << std::endl;
+    // }
 
-    std::vector<Frame> frame2Initial;
-    std::vector<Pose> pose2Initial;
-    for(int k = 0; k < 6; k++){
-        frame2Initial.emplace_back(frames[k]);
-        pose2Initial.emplace_back(pose->points[k]);
-    }
+    // std::vector<Frame> frame2Initial;
+    // std::vector<Pose> pose2Initial;
+    // for(int k = 0; k < 6; k++){
+    //     frame2Initial.emplace_back(frames[k]);
+    //     pose2Initial.emplace_back(pose->points[k]);
+    // }
+
     // std::cout << "start initialization" << std::endl;
     // Frame frame_initial = ssc.intialization(frame2Initial, pose2Initial);
+    // int initial_id = frame_initial.id;
+    // frames[initial_id] = frame_initial;
     // ssc.saveSegCloud(frame_initial, path, ssc.id, "_seg.pcd");
 
-    ssc.tracking(frame2Initial[3], frame2Initial[4], pose2Initial[3], pose2Initial[4]);
-    ssc.saveSegCloud(frame2Initial[3], path, ssc.id, "_seg.pcd");
+    // for(int i = initial_id; i <= frames.size() - 2; i++){
+    //     std::cout << "tracking: " << i << std::endl;
+    //     ssc.tracking(frames[i], frames[i + 1], poses[i], poses[i + 1]);
+    //     // ssc.saveSegCloud(frames[i], path, frames[i].id, "_seg.pcd");
+    // }
+    // for(int i = initial_id; i < frames.size() - 2; i++){
+    //     ssc.saveSegCloud(frames[i], path, frames[i].id, "_seg.pcd");
+    // }
+
+    // ssc.tracking(frame2Initial[3], frame2Initial[4], pose2Initial[3], pose2Initial[4]);
+    // ssc.saveSegCloud(frame2Initial[3], path, ssc.id, "_seg.pcd");
 
     ros::spin();
 
