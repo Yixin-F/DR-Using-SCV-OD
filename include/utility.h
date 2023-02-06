@@ -150,11 +150,12 @@ struct Cluster{
         cloud.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
 
-    int track_id = -1;
-    int name = -1;  // tracking
+    int track_id = -1;  // tracking
+    int name = -1;  
     int type = -1;  // building, tree, car, other
-    int state = - 1;   //  dynamic 1, static 0 
+    int state = -1;   //  dynamic 1, static 0 
     int color[3];
+    std::pair<pcl::PointXYZI, pcl::PointXYZI> bounding_box;
     std::vector<int> occupy_pts;  // pt id in cloud_use, prepared to evalute
     std::vector<int> occupy_voxels;  // id in hash cloud
     std::vector<int> occupy_vcs; // id in voxel cloud
@@ -174,12 +175,12 @@ struct Frame{
     }
 
     int id;
+    int max_name;
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;
     std::unordered_map<int, Voxel> hash_cloud;
     pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud;  // voxel cloud
     std::unordered_map<int, Cluster> cluster_set;
     // std::vector<Cluster> cluster_set;   // in the same order with center_cloud
-    Pose pose;
 };
 
 class Utility{

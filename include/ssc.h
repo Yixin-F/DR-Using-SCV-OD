@@ -26,10 +26,12 @@ public:
 
     boost::shared_ptr<PatchWork<pcl::PointXYZI>> PatchworkGroundSeg;   // patchwork
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;  // noground cloud with intenisty calibrated
-
+    
+    Frame frame_based;  // mapping based frame
+    int name = 0;  // record cluster tracked
     std::vector<Frame> frame_set;
-    std::unordered_map<int, Cluster> cluster_track;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_map;
+    std::unordered_map<int, Cluster> tracking_map;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr semantic_map;
 
     ~SSC();
     SSC();
