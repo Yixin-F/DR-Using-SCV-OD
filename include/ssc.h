@@ -27,6 +27,7 @@ public:
     boost::shared_ptr<PatchWork<pcl::PointXYZI>> PatchworkGroundSeg;   // patchwork
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;  // noground cloud with intenisty calibrated
 
+    std::vector<Frame> frame_set;
     std::unordered_map<int, Cluster> cluster_track;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_map;
 
@@ -50,10 +51,9 @@ public:
     void clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::unordered_map<int, Voxel>& hash_cloud_);
     std::vector<int> findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_, int size_);
     void mergeClusters(std::vector<int>& clusterIdxs_, const int& idx1_, const int& idx2_);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr getCloudByIdx(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_from_, const std::vector<int>& idx_vec_);
     pcl::PointXYZI getCenterOfCloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
     std::pair<pcl::PointXYZI, pcl::PointXYZI> getBoundingBoxOfCloud(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
-    bool refineClusterByBoundingBox(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_cluster_);
+    void refineClusterByBoundingBox(Frame& frame_ssc_);
     void refineClusterByIntensity(Frame& frame_ssc);
     void getVoxelCloudFromHashCloud(std::unordered_map<int, Voxel>& hashCloud_);
     void saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
@@ -71,9 +71,10 @@ public:
     void tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
     float compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixXd& feature2_);
 
-    // tool
+    // main
     void getPose();
     void getCloud();
+    void segDF();
 
 };
 
