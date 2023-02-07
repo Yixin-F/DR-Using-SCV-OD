@@ -417,7 +417,8 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         c.second.bounding_box = getBoundingBoxOfCloud(c.second.cloud);
         pcl::PointXYZI point_min = c.second.bounding_box.first;
         pcl::PointXYZI point_max = c.second.bounding_box.second;
-        if(point_min.z > 0.f || c.second.occupy_pts.size() < toBeClass || (1 && (point_max.z - point_min.z) < point_max.z * 0.9)){
+        float diff_z = point_max.z - point_min.z;
+        if(point_min.z > 0.f || c.second.occupy_pts.size() < toBeClass || ((point_max.z - point_min.z) < point_max.z * 0.9) || (point_min.z < - sensor_height / 2 && diff_z < 0.2)){
             erase_id.emplace_back(c.first);
         }
         else{
@@ -984,7 +985,7 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
                 //         l_find->second.emplace_back(it_find->first);
                 //     }
                 // }
-                
+
             }
 
             for(auto& re : remap_name){
@@ -995,54 +996,48 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
                 c.second.state = 1;
                 dynamic_num ++;
             }
+
             else if(remap_name.size() == 1){
                 std::unordered_map<int, std::vector<int>>::iterator it = remap_name.begin();
-                
-                if(frame_next_.cluster_set[it->first].type == car){
-                    if(((float)it->second.size() / (float)frame_next_.cluster_set[it->first].occupy_vcs.size()) < occupancy){
+
+                if(((float)it->second.size() / (float)frame_next_.cluster_set[it->first].occupy_vcs.size()) < occupancy){
+                    if(frame_next_.cluster_set[it->first].type == car){
                         c.second.state = 1;
                         dynamic_num ++;
                     }
                     else{
                         c.second.state = 0;
-                        frame_next_.cluster_set[it->first].track_id = c.second.track_id;
-                        *frame_next_.cluster_set[it->first].cloud += *cluster;
-                        frame_next_.cluster_set[it->first].color[0] = c.second.color[0];
-                        frame_next_.cluster_set[it->first].color[1] = c.second.color[1];
-                        frame_next_.cluster_set[it->first].color[2] = c.second.color[2];
-                    }
+                        Cluster cluster_new;
+                        cluster_new.track_id = c.second.track_id;
+                        cluster_new.name = frame_next_.max_name ++;
+                        // cluster_new.type = car;
+                        cluster_new.type = frame_next_.cluster_set[it->first].type;
+                        cluster_new.color[0] = c.second.color[0];
+                        cluster_new.color[1] = c.second.color[1];
+                        cluster_new.color[2] = c.second.color[2];
+                        cluster_new.occupy_voxels = it->second;
+                        reduceVec(frame_next_.cluster_set[it->first].occupy_voxels, cluster_new.occupy_voxels);
+                        for(auto& v : it->second){
+                            frame_next_.hash_cloud[v].label = cluster_new.name;
+                            addVec(cluster_new.occupy_pts, frame_next_.hash_cloud[v].ptIdx);
+                        }
+                        getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
+                        *cluster_new.cloud += *cluster;
+                        reduceVec(frame_next_.cluster_set[it->first].occupy_pts, cluster_new.occupy_pts);
+                        frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
+                        }    
                 }
-
-                // if(frame_next_.cluster_set[it->first].type == car || ((float)it->second.size() / (float)frame_next_.cluster_set[it->first].occupy_vcs.size()) >= occupancy){
-                //     c.second.state = 0;
-                //     frame_next_.cluster_set[it->first].track_id = c.second.track_id;
-                //     *frame_next_.cluster_set[it->first].cloud += *cluster;
-                //     frame_next_.cluster_set[it->first].color[0] = c.second.color[0];
-                //     frame_next_.cluster_set[it->first].color[1] = c.second.color[1];
-                //     frame_next_.cluster_set[it->first].color[2] = c.second.color[2];
-                // }
 
                 else{
                     c.second.state = 0;
-                    Cluster cluster_new;
-                    cluster_new.track_id = c.second.track_id;
-                    cluster_new.name = frame_next_.max_name ++;
-                    cluster_new.type = car;
-                    cluster_new.color[0] = c.second.color[0];
-                    cluster_new.color[1] = c.second.color[1];
-                    cluster_new.color[2] = c.second.color[2];
-                    cluster_new.occupy_voxels = it->second;
-                    reduceVec(frame_next_.cluster_set[it->first].occupy_voxels, cluster_new.occupy_voxels);
-                    for(auto& v : it->second){
-                        frame_next_.hash_cloud[v].label = cluster_new.name;
-                        addVec(cluster_new.occupy_pts, frame_next_.hash_cloud[v].ptIdx);
-                    }
-                    getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
-                    *cluster_new.cloud += *cluster;
-                    reduceVec(frame_next_.cluster_set[it->first].occupy_pts, cluster_new.occupy_pts);
-                    frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
+                    frame_next_.cluster_set[it->first].track_id = c.second.track_id;
+                    *frame_next_.cluster_set[it->first].cloud += *cluster;
+                    frame_next_.cluster_set[it->first].color[0] = c.second.color[0];
+                    frame_next_.cluster_set[it->first].color[1] = c.second.color[1];
+                    frame_next_.cluster_set[it->first].color[2] = c.second.color[2];
                 }
             }
+
             else if(remap_name.size() > 1){
                 c.second.state = 0;
                 Cluster cluster_new;
