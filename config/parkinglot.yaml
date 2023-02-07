@@ -10,17 +10,17 @@ session:
   pose_path_: "/home/fyx/ufo_hiahia/src/in/transformations.pcd"
   init_: 5   # the num of frame to initialize
   start_: 5  # the start index in dataset, please check it
-  end_: 15
+  end_: 200
 
 ssc:
   calib_path_: "calib/"
   seg_path_: "seg/"
   map_path_: "map/"
 
-  sensor_height_: 2.5
+  sensor_height_: 2.4
 
-  min_dis_:  2.0  # /m   use 0.0 for parkinglot dataset
-  max_dis_: 50.0  # ratio
+  min_dis_:  1.8  # /m   use 0.0 for parkinglot dataset
+  max_dis_: 40.0  # ratio
 
   min_angle_: 0.0  # /deg
   max_angle_: 360.0
@@ -28,8 +28,8 @@ ssc:
   min_azimuth_: -30.0  # /deg
   max_azimuth_: 60.0
 
-  range_res_: 0.3
-  sector_res_: 1.0
+  range_res_: 0.4
+  sector_res_: 1.2
   azimuth_res_: 2.0
 
   max_intensity_: 255.0  # intenisty calibration
@@ -38,11 +38,11 @@ ssc:
   search_num_: 10
 
   iteration_: 3
-  toBeClass_: 5  # the min numbers of points to be one class
+  toBeClass_: 10  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
   intensity_diff_: 3.0
   intensity_cov_: 2.0
-  occupancy_: 0.7
+  occupancy_: 0.8
 
   building_: 0  # cluster map
   tree_: 1
