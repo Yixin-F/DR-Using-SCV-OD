@@ -21,15 +21,7 @@ bool fileSort(std::string name1_, std::string name2_){  // filesort by name
     return std::stoi(name1) < std::stoi(name2);
 }
 
-bool sort1(const std::pair<int, std::vector<int>>& pair1_, const std::pair<int, std::vector<int>>& pair2_){
-    return pair1_.second.size() <= pair2_.second.size();
-}
-
-bool sort2(const std::vector<int>& vec1_, const std::vector<int>& vec2_){
-    return vec1_.size() >= vec2_.size();
-}
-
-bool sort3(const std::pair<int, Cluster>& cluster1_, const std::pair<int, Cluster>& cluster2_){
+bool sort1(const std::pair<int, Cluster>& cluster1_, const std::pair<int, Cluster>& cluster2_){
     return cluster1_.second.occupy_voxels >= cluster2_.second.occupy_voxels;
 }
 
@@ -48,8 +40,8 @@ SSC::SSC(){
     fsmkdir(calib_save);
     seg_save = out_path + seg_path;
     fsmkdir(seg_save);
-    map_save = out_path + map_path;
-    fsmkdir(map_save);
+    pcd_save = out_path + pcd_path;
+    fsmkdir(pcd_save);
 
     std::cout << "----  SSC INITIALIZATION  ----" << "\n"
                        << "range_res: " << range_res << " sector_res: " << sector_res << " azimuth_res: " << azimuth_res << "\n"
@@ -62,14 +54,12 @@ SSC::SSC(){
                        << "map_init: " << init << "\n"
                        << "calib_save: " << calib_save << "\n"
                        << "seg_save: " << seg_save << "\n"
-                       << "map_save: " << map_save << "\n"
                        << std::endl;         
 }
 
 void SSC::allocateMemory(){
     PatchworkGroundSeg.reset(new PatchWork<pcl::PointXYZI>());
     cloud_use.reset(new pcl::PointCloud<pcl::PointXYZI>());
-    semantic_map.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
 }
 
 void SSC::reset(){
@@ -418,7 +408,7 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         pcl::PointXYZI point_min = c.second.bounding_box.first;
         pcl::PointXYZI point_max = c.second.bounding_box.second;
         float diff_z = point_max.z - point_min.z;
-        if(point_min.z > 0.f || c.second.occupy_pts.size() < toBeClass || ((point_max.z - point_min.z) < point_max.z * 0.9) || (point_min.z < - sensor_height / 2 && diff_z < 0.2)){
+        if(point_min.z > 0.f || (c.second.occupy_pts.size() < toBeClass) || ((point_max.z - point_min.z) < point_max.z * 0.9) || (point_max.z < - sensor_height / 3 && diff_z < 0.2)){
             erase_id.emplace_back(c.first);
         }
         else{
@@ -446,7 +436,7 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
             b = 0.f;
         }
         else{
-            if(c.second.type == car || c.second.type == other || c.second.type == -1){
+            if(c.second.type == car || c.second.type == -1){
                 // r = rng.uniform(20, 200);   // car is random color
                 // g = rng.uniform(20, 200); 
                 // b = rng.uniform(20, 200); 
@@ -495,7 +485,7 @@ void SSC::refineClusterByIntensity(Frame& frame_ssc){
     while(iter){
         TicToc refine_t("refine");
         std::vector<std::pair<int, Cluster>> clusters(frame_ssc.cluster_set.begin(), frame_ssc.cluster_set.end());
-        std::sort(clusters.begin(), clusters.end(), sort3);
+        std::sort(clusters.begin(), clusters.end(), sort1);
         std::vector<int> invalid_name;
         std::unordered_map<int, std::vector<int>> fusion_map;
         for(auto& c : clusters){
@@ -733,7 +723,7 @@ void SSC::recognize(Frame& frame_ssc_){
     TicToc recognize_t("recognize");
     const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double height = sensor_height / 4;
+    const double height = sensor_height / 3;
     for(auto& c : frame_ssc_.cluster_set){
         Feature eigen_f = getDescriptorByEigenValue(c.second.cloud);
         Eigen::MatrixXd eigen_f_11 = turnVec2Matrix(eigen_f.feature_values);
@@ -778,38 +768,111 @@ float SSC::compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixX
 }
 
 void SSC::getPose(){
-    pcl::PointCloud<Pose>::Ptr pose_tmp(new pcl::PointCloud<Pose>());
-    loadCloud(pose_tmp, pose_path);
-    int all = pose_tmp->points.size();
-    if(start < 0 || end > all){
-        ROS_WARN("the start or end index set error");
-        ros::shutdown();
+    if(is_pcd){
+        pcl::PointCloud<Pose>::Ptr pose_tmp(new pcl::PointCloud<Pose>());
+        loadCloud(pose_tmp, pose_path);
+        int all = pose_tmp->points.size();
+        if(start < 0 || end > all){
+            ROS_WARN("the start or end index set error");
+            ros::shutdown();
+        }
+        for(size_t i = start; i < end; i++){
+            pose_vec.emplace_back(pose_tmp->points[i]);
+        }
     }
-    for(size_t i = start; i < end; i++){
-        pose_vec.emplace_back(pose_tmp->points[i]);
+    else{  // TODO:
+
     }
+    
     ROS_DEBUG("load pose size: %d", (int)pose_vec.size());
 }
 
 void SSC::getCloud(){
-    std::vector<std::string> cloud_name;
-    for(auto& entry_ : fs::directory_iterator(data_path)){
-        cloud_name.emplace_back(entry_.path());
-    }
-    std::sort(cloud_name.begin(), cloud_name.end(), fileSort);
+    if(is_pcd){
+        std::vector<std::string> cloud_name;
+        for(auto& entry_ : fs::directory_iterator(data_path)){
+            cloud_name.emplace_back(entry_.path());
+        }
+        std::sort(cloud_name.begin(), cloud_name.end(), fileSort);
 
-    int all = cloud_name.size();
-    if(start < 0 || end > all){
-        ROS_WARN("the start or end index set error");
-        ros::shutdown();
-    }
+        int all = cloud_name.size();
+        if(start < 0 || end > all){
+            ROS_WARN("the start or end index set error");
+            ros::shutdown();
+        }
 
-    for(size_t i = start; i < end; i++){
-        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_tmp(new pcl::PointCloud<pcl::PointXYZI>());
-        loadCloud(cloud_tmp, cloud_name[i]);
-        cloud_vec.emplace_back(cloud_tmp);
+        for(size_t i = start; i < end; i++){
+            pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_tmp(new pcl::PointCloud<pcl::PointXYZI>());
+            loadCloud(cloud_tmp, cloud_name[i]);
+            cloud_vec.emplace_back(cloud_tmp);
+        }
     }
-    ROS_DEBUG("load pose size: %d", (int)cloud_vec.size());
+    else{  //TODO:
+        std::vector<std::string> bin_name;
+        for(auto& entry_ : fs::directory_iterator(data_path)){
+            bin_name.emplace_back(entry_.path());
+        }
+        std::sort(bin_name.begin(), bin_name.end(), fileSort);
+
+        std::vector<std::string> label_name;
+        for(auto& entry_ : fs::directory_iterator(label_path)){
+            label_name.emplace_back(entry_.path());
+        }
+        std::sort(label_name.begin(), label_name.end(), fileSort);
+
+        if(bin_name.size() != label_name.size()){
+            ROS_WARN("bins or labels load error");
+            ros::shutdown();
+        }
+
+        for(size_t i = start; i < end; i++){
+            pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());  // use in segDF
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());  // save
+
+            std::ifstream in_label(label_name[i], std::ios::binary);
+            if(!in_label.is_open()){
+                ROS_ERROR("can't open %s", label_name[i].c_str());
+                ros::shutdown();
+            }
+            in_label.seekg(0, std::ios::end);
+            uint32_t num_points = in_label.tellg() / sizeof(uint32_t);
+            in_label.seekg(0, std::ios::beg);
+            std::vector<uint32_t> values_label(num_points);
+            in_label.read((char *)&values_label[0], num_points * sizeof(uint32_t));
+            std::ifstream in_cloud(bin_name[i], std::ios::binary);
+            std::vector<float> values_cloud(4 * num_points);
+            in_cloud.read((char *)&values_cloud[0], 4 * num_points * sizeof(float));
+
+            raw_cloud->points.resize(num_points);
+            rgb_cloud->points.resize(num_points);
+            for(uint32_t k = 0; k < num_points; k++){
+                raw_cloud->points[k].x = values_cloud[k * 4];
+                raw_cloud->points[k].y = values_cloud[k * 4 + 1];
+                raw_cloud->points[k].z = values_cloud[k * 4 + 2];
+                raw_cloud->points[k].intensity = values_cloud[k * 4 + 3];
+
+                rgb_cloud->points[k].x = values_cloud[k * 4];
+                rgb_cloud->points[k].y = values_cloud[k * 4 + 1];
+                rgb_cloud->points[k].z = values_cloud[k * 4 + 2];
+                if(findNameInVec(values_label[k], dynamic_label)){
+                    rgb_cloud->points[k].r = 255.f;
+                    rgb_cloud->points[k].g = 0.f;
+                    rgb_cloud->points[k].b = 0.f;
+                }
+                else{
+                    rgb_cloud->points[k].r = 255.f;
+                    rgb_cloud->points[k].g = 255.f;
+                    rgb_cloud->points[k].b = 255.f;
+                }
+            }
+            in_label.close();
+            in_cloud.close();
+            cloud_vec.emplace_back(raw_cloud);
+            saveCloud(rgb_cloud, pcd_save, i, "_semantickitti.pcd");
+        }
+    }
+    
+    ROS_DEBUG("load cloud size: %d", (int)cloud_vec.size());
 } 
 
 Frame SSC::intialization(const std::vector<Frame>& frames_, const std::vector<Pose>& poses_){
@@ -908,11 +971,6 @@ Frame SSC::intialization(const std::vector<Frame>& frames_, const std::vector<Po
     // initialize tacking map
     recognize(frame_based);
     frame_set[frame_based.id - start] = frame_based;
-    for(auto& c : frame_based.cluster_set){
-        c.second.track_id = name;
-        tracking_map.insert(std::make_pair(name, c.second));
-        name ++;
-    }
     mapping_init = true;
 
     ROS_INFO("initialization: time_use(ms): %0.2f, based_id: %d, initialized cluster_num: %d", (float)init_t.toc(), frame_based.id, (int)frame_based.cluster_set.size());
@@ -1000,7 +1058,7 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
             else if(remap_name.size() == 1){
                 std::unordered_map<int, std::vector<int>>::iterator it = remap_name.begin();
 
-                if(((float)it->second.size() / (float)frame_next_.cluster_set[it->first].occupy_vcs.size()) < occupancy){
+                if(((float)it->second.size() / (float)frame_next_.cluster_set[it->first].occupy_voxels.size()) < occupancy){
                     if(frame_next_.cluster_set[it->first].type == car){
                         c.second.state = 1;
                         dynamic_num ++;
@@ -1069,44 +1127,44 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
 
 void SSC::segDF(){
     id = start;
-    getPose();
+    // getPose();
     getCloud();      
     std::cout << "\n";
 
-    for(auto& cloud : cloud_vec){
-        ROS_INFO("frame %d is added into the segDF", id);
-        process(cloud);
-        segment();
-        recognize(frame_ssc);
-        frame_set.emplace_back(frame_ssc);
-        reset();
-        id ++;
-        std::cout << "\n";
-    }
+    // for(auto& cloud : cloud_vec){
+    //     ROS_INFO("frame %d is added into the segDF", id);
+    //     process(cloud);
+    //     segment();
+    //     recognize(frame_ssc);
+    //     frame_set.emplace_back(frame_ssc);
+    //     reset();
+    //     id ++;
+    //     std::cout << "\n";
+    // }
 
-    std::vector<Frame> frame_init;
-    std::vector<Pose> pose_init;
-    for(int i = 0; i < init; i++){
-        frame_init.emplace_back(frame_set[i]);
-        pose_init.emplace_back(pose_vec[i]);
-    }
+    // std::vector<Frame> frame_init;
+    // std::vector<Pose> pose_init;
+    // for(int i = 0; i < init; i++){
+    //     frame_init.emplace_back(frame_set[i]);
+    //     pose_init.emplace_back(pose_vec[i]);
+    // }
 
-    frame_based = intialization(frame_init, pose_init);
-    saveSegCloud(frame_based, frame_based.cloud_use);
-    std::cout << "\n";
+    // frame_based = intialization(frame_init, pose_init);
+    // saveSegCloud(frame_based, frame_based.cloud_use);
+    // std::cout << "\n";
 
 
-    int start_df = frame_based.id - start;
-    for(int i = start_df ; i < frame_set.size() - 1; i++){
-        tracking(frame_set[i], frame_set[i + 1], pose_vec[i], pose_vec[i + 1]);
-    }
+    // int start_df = frame_based.id - start;
+    // for(int i = start_df ; i < frame_set.size() - 1; i++){
+    //     tracking(frame_set[i], frame_set[i + 1], pose_vec[i], pose_vec[i + 1]);
+    // }
 
-    for(int i = i = start_df; i < frame_set.size() - 1; i++){
-        Eigen::Affine3f trans_i = pcl::getTransformation(pose_vec[i].x, pose_vec[i].y, pose_vec[i].z, pose_vec[i].roll, pose_vec[i].pitch, pose_vec[i].yaw);
-        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
-        transformCloud(frame_set[i].cloud_use, trans_i, cloud);
-        saveSegCloud(frame_set[i], cloud);
-    }
+    // for(int i = i = start_df; i < frame_set.size() - 1; i++){
+    //     Eigen::Affine3f trans_i = pcl::getTransformation(pose_vec[i].x, pose_vec[i].y, pose_vec[i].z, pose_vec[i].roll, pose_vec[i].pitch, pose_vec[i].yaw);
+    //     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    //     transformCloud(frame_set[i].cloud_use, trans_i, cloud);
+    //     saveSegCloud(frame_set[i], cloud);
+    // }
     
 }
 

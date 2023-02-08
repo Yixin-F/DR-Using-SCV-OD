@@ -15,7 +15,7 @@ public:
 
     std::string calib_save;
     std::string seg_save;
-    std::string map_save;
+    std::string pcd_save;
 
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_vec;
     std::vector<Pose> pose_vec;
@@ -30,8 +30,6 @@ public:
     Frame frame_based;  // mapping based frame
     int name = 0;  // record cluster tracked
     std::vector<Frame> frame_set;
-    std::unordered_map<int, Cluster> tracking_map;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr semantic_map;
 
     ~SSC();
     SSC();
@@ -68,7 +66,6 @@ public:
     bool regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
     
     // dynamic detect
-    void removert();
     Frame intialization(const std::vector<Frame>& frames_, const std::vector<Pose>& poses_);
     void tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose pose_next_);
     float compareFeature(const Eigen::MatrixXd& feature1_, const Eigen::MatrixXd& feature2_);
@@ -77,7 +74,6 @@ public:
     void getPose();
     void getCloud();
     void segDF();
-
 };
 
 

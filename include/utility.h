@@ -111,7 +111,6 @@ struct Voxel{
     int sector_idx;
     int azimuth_idx;
     int label = -1;
-    int voxel_cloud_id;
     pcl::PointXYZI center;   // the point center's intensity is its id in voxel cloud
     std::vector<int> ptIdx;  // the vector of id in noground cloud
     std::vector<float> intensity_record;
@@ -152,13 +151,12 @@ struct Cluster{
 
     int track_id = -1;  // tracking
     int name = -1;  
-    int type = -1;  // building, tree, car, other
+    int type = -1;  // building, tree, car
     int state = -1;   //  dynamic 1, static 0 
     int color[3];
     std::pair<pcl::PointXYZI, pcl::PointXYZI> bounding_box;
     std::vector<int> occupy_pts;  // pt id in cloud_use, prepared to evalute
     std::vector<int> occupy_voxels;  // id in hash cloud
-    std::vector<int> occupy_vcs; // id in voxel cloud
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud;
     Eigen::MatrixXd feature_matrix;
 };
@@ -180,7 +178,6 @@ struct Frame{
     std::unordered_map<int, Voxel> hash_cloud;
     pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud;  // voxel cloud
     std::unordered_map<int, Cluster> cluster_set;
-    // std::vector<Cluster> cluster_set;   // in the same order with center_cloud
 };
 
 class Utility{
@@ -189,6 +186,7 @@ public:
     int kNumOmpCores;
     bool save;
     bool mapping_init;
+    bool is_pcd;
 
     std::string data_path;
     std::string label_path;
@@ -199,7 +197,7 @@ public:
 
     std::string calib_path;
     std::string seg_path;
-    std::string map_path;
+    std::string pcd_path;
  
     float sensor_height;
     float min_dis;
@@ -227,7 +225,7 @@ public:
     int building;
     int tree;
     int car;
-    int other;
+    std::vector<int> dynamic_label;
 
     double kOneThird;
     double kLinearityMax;
@@ -238,9 +236,6 @@ public:
     double kEigenEntropyMax;
     double kChangeOfCurvatureMax;
     double kNPointsMax;
-    
-    float feature_diff;
-    float distance_diff;
 
     ros::NodeHandle nh;
 
@@ -251,6 +246,7 @@ public:
         nh.param<int>("common/kNumOmpCores_", kNumOmpCores, 6);
         nh.param<bool>("common/save_", save, true);
         nh.param<bool>("common/mapping_init_", mapping_init, false);
+        nh.param<bool>("common/is_pcd_", is_pcd, false);
 
         nh.param<std::string>("session/data_path_", data_path, " ");
         nh.param<std::string>("session/label_path_", label_path, " ");
@@ -261,7 +257,7 @@ public:
 
         nh.param<std::string>("ssc/calib_path_", calib_path, " ");
         nh.param<std::string>("ssc/seg_path_", seg_path, " ");
-        nh.param<std::string>("ssc/map_path_", map_path, " ");
+        nh.param<std::string>("ssc/pcd_path_", pcd_path, " ");
 
         nh.param<float>("ssc/sensor_height_", sensor_height, 2.0);
         nh.param<float>("ssc/min_dis_", min_dis, 0.0);
@@ -286,7 +282,7 @@ public:
         nh.param<int>("ssc/building_", building, 0);
         nh.param<int>("ssc/tree_", tree, 1);
         nh.param<int>("ssc/car_", car, 2);
-        nh.param<int>("ssc/other_", other, 3);
+        nh.param<std::vector<int>>("ssc/dynamic_label_", dynamic_label, std::vector<int>());
 
         nh.param<double>("feature/kOneThird_", kOneThird, 0.333);
         nh.param<double>("feature/kLinearityMax_",  kLinearityMax, 740.0);
@@ -297,8 +293,6 @@ public:
         nh.param<double>("feature/kEigenEntropyMax_", kEigenEntropyMax, 0.956129);
         nh.param<double>("feature/kChangeOfCurvatureMax_", kChangeOfCurvatureMax, 0.99702);
         nh.param<double>("feature/kNPointsMax_", kNPointsMax, 13200.0);
-        nh.param<float>("feature/feature_diff_", feature_diff, 1.2);
-        nh.param<float>("feature/distance_diff_", distance_diff, 0.5);
     }
 
     void fsmkdir(std::string _path){

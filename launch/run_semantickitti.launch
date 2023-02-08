@@ -3,7 +3,7 @@
     <arg name="project" default="ufo"/>
 
     <!-- Parameters -->
-    <rosparam file="/home/fyx/ufo_hiahia/src/ufo/config/parkinglot.yaml"  command="load" />
+    <rosparam file="/home/fyx/ufo_hiahia/src/ufo/config/semantickitti.yaml"  command="load" />
 
     <!--- ufo -->
     <node pkg="$(arg project)" type="$(arg project)_ufo"   name="$(arg project)_ufo"   output="screen"/>

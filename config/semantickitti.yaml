@@ -3,12 +3,12 @@ common:
   kNumOmpCores_: 8   # cores
   save_: true
   mapping_init_: false
-  is_pcd_: true
+  is_pcd_: false
 
 session:
-  data_path_: "/home/fyx/ufo_hiahia/src/in/scans/"
+  data_path_: "/home/fyx/ufo_hiahia/src/in/bins/"
   label_path_: "/home/fyx/ufo_hiahia/src/in/labels/"
-  pose_path_: "/home/fyx/ufo_hiahia/src/in/transformations.pcd"
+  pose_path_: "/home/fyx/ufo_hiahia/src/in/pose.txt"
   init_: 5   # the num of frame to initialize
   start_: 5  # the start index in dataset, please check it
   end_: 200
@@ -16,9 +16,9 @@ session:
 ssc:
   calib_path_: "calib/"
   seg_path_: "seg/"
-  map_path_: "map/"
+  pcd_path_: "pcd/"
 
-  sensor_height_: 2.3
+  sensor_height_: 2.4
 
   min_dis_:  1.8  # /m   use 0.0 for parkinglot dataset
   max_dis_: 40.0  # ratio
@@ -48,6 +48,8 @@ ssc:
   building_: 0  # cluster map
   tree_: 1
   car_: 2
+
+  dynamic_label_: [252, 253, 254, 255, 256, 257, 258, 259]   # refer to semantic scan context
 
 feature:
   kOneThird_: 0.333
