@@ -453,7 +453,25 @@ public:
         }
         return m;
     }
-    
+
+    Eigen::Vector3f rotationMatrixToEulerAngles(Eigen::Matrix3f &R){
+        float sy = sqrt(R(0,0) * R(0,0) + R(1,0) * R(1,0));
+        bool singular = sy < 1e-6;
+        float x, y, z;
+        if (!singular)
+        {
+            x = atan2( R(2,1), R(2,2));
+            y = atan2(-R(2,0), sy);
+            z = atan2( R(1,0), R(0,0));
+        }
+        else
+        {
+            x = atan2(-R(1,2), R(1,1));
+            y = atan2(-R(2,0), sy);
+            z = 0;
+        }
+        return {x, y, z};
+    }
 };
 
 #endif

@@ -408,7 +408,8 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         pcl::PointXYZI point_min = c.second.bounding_box.first;
         pcl::PointXYZI point_max = c.second.bounding_box.second;
         float diff_z = point_max.z - point_min.z;
-        if(point_min.z > 0.f || (c.second.occupy_pts.size() < toBeClass) || ((point_max.z - point_min.z) < point_max.z * 0.9) || (point_max.z < - sensor_height / 3 && diff_z < 0.2)){
+        // if(point_min.z > 0.f || (c.second.occupy_pts.size() < toBeClass) || ((point_max.z - point_min.z) < point_max.z * 0.9) || (point_max.z < - sensor_height / 3 && diff_z < 0.2)){
+        if( (c.second.occupy_pts.size() < toBeClass) ){
             erase_id.emplace_back(c.first);
         }
         else{
@@ -437,12 +438,12 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
         }
         else{
             if(c.second.type == car || c.second.type == -1){
-                // r = rng.uniform(20, 200);   // car is random color
-                // g = rng.uniform(20, 200); 
-                // b = rng.uniform(20, 200); 
-                r = c.second.color[0];
-                g = c.second.color[1];
-                b = c.second.color[2];
+                r = rng.uniform(20, 200);   // car is random color
+                g = rng.uniform(20, 200); 
+                b = rng.uniform(20, 200); 
+                // r = c.second.color[0];
+                // g = c.second.color[1];
+                // b = c.second.color[2];
             }
             else if(c.second.type == building){  
                 r = 0.f;
@@ -699,8 +700,8 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     reg.setNumberOfNeighbours (toBeClass * 2);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (10.0 / 180.0 * M_PI);  // TODO: ?
-    reg.setCurvatureThreshold (1.5);
+    reg.setSmoothnessThreshold (6.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setCurvatureThreshold (1.2);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -781,7 +782,48 @@ void SSC::getPose(){
         }
     }
     else{  // TODO:
+        std::ifstream pose_file;
+        std:string line;
+        std::cout << 1 << std::endl;
+        pose_file.open(pose_path, std::ios::in);
+        std::cout << 2 << std::endl;
+        int count = 0;
+        while(getline(pose_file, line)){
+            if(count < start || count >= end){
+                continue;
+            }
+            std::vector<std::string> line_s;
+            float pose_v[12];
+            boost::split(line_s, line, boost::is_any_of(" "));
+            for(int l = 0; l < line_s.size(); l++){
+                std::cout << line_s[l].c_str() << " ";
+                pose_v[l] = atof(line_s[l].c_str()); 
+            }
+            std::cout << std::endl;
 
+            Pose pose;
+            pose.x = pose_v[3];
+            pose.y = pose_v[7];
+            pose.z = pose_v[11];
+            Eigen::Matrix3f rotation;
+            rotation(0, 0) = pose_v[0];
+            rotation(0, 1) = pose_v[1];
+            rotation(0, 2) = pose_v[2];
+            rotation(1, 0) = pose_v[4];
+            rotation(1, 1) = pose_v[5];
+            rotation(1, 2) = pose_v[6];
+            rotation(2, 0) = pose_v[8];
+            rotation(2, 1) = pose_v[9];
+            rotation(2, 2) = pose_v[10];
+            Eigen:: Vector3f rpy = rotationMatrixToEulerAngles(rotation);
+            pose.roll = rpy[0];
+            pose.yaw = rpy[1];
+            pose.pitch = rpy[2];
+
+            pose_vec.emplace_back(pose);
+            count ++;
+            std::cout << count << std::endl;
+        }
     }
     
     ROS_DEBUG("load pose size: %d", (int)pose_vec.size());
@@ -825,6 +867,7 @@ void SSC::getCloud(){
             ros::shutdown();
         }
 
+        std::vector<uint32_t> labels;
         for(size_t i = start; i < end; i++){
             pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());  // use in segDF
             pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());  // save
@@ -843,6 +886,9 @@ void SSC::getCloud(){
             std::vector<float> values_cloud(4 * num_points);
             in_cloud.read((char *)&values_cloud[0], 4 * num_points * sizeof(float));
 
+            // std::cout << values_label.size() << std::endl;
+            // addVec(labels, values_label);
+
             raw_cloud->points.resize(num_points);
             rgb_cloud->points.resize(num_points);
             for(uint32_t k = 0; k < num_points; k++){
@@ -854,7 +900,8 @@ void SSC::getCloud(){
                 rgb_cloud->points[k].x = values_cloud[k * 4];
                 rgb_cloud->points[k].y = values_cloud[k * 4 + 1];
                 rgb_cloud->points[k].z = values_cloud[k * 4 + 2];
-                if(findNameInVec(values_label[k], dynamic_label)){
+                
+                if(findNameInVec((values_label[k] &  0xFFFF), dynamic_label)){
                     rgb_cloud->points[k].r = 255.f;
                     rgb_cloud->points[k].g = 0.f;
                     rgb_cloud->points[k].b = 0.f;
@@ -870,6 +917,12 @@ void SSC::getCloud(){
             cloud_vec.emplace_back(raw_cloud);
             saveCloud(rgb_cloud, pcd_save, i, "_semantickitti.pcd");
         }
+
+        // sampleVec(labels);
+        // for(auto& l : labels){
+        //     std::cout << l << " ";
+        // }
+        // std::cout << std::endl;
     }
     
     ROS_DEBUG("load cloud size: %d", (int)cloud_vec.size());
@@ -1127,20 +1180,21 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
 
 void SSC::segDF(){
     id = start;
-    // getPose();
+    getPose();
     getCloud();      
     std::cout << "\n";
 
-    // for(auto& cloud : cloud_vec){
-    //     ROS_INFO("frame %d is added into the segDF", id);
-    //     process(cloud);
-    //     segment();
-    //     recognize(frame_ssc);
-    //     frame_set.emplace_back(frame_ssc);
-    //     reset();
-    //     id ++;
-    //     std::cout << "\n";
-    // }
+    for(auto& cloud : cloud_vec){
+        ROS_INFO("frame %d is added into the segDF", id);
+        process(cloud);
+        segment();
+        recognize(frame_ssc);
+        frame_set.emplace_back(frame_ssc);
+        saveSegCloud(frame_ssc, frame_ssc.cloud_use);
+        reset();
+        id ++;
+        std::cout << "\n";
+    }
 
     // std::vector<Frame> frame_init;
     // std::vector<Pose> pose_init;
