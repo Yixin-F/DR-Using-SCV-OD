@@ -21,7 +21,7 @@ ssc:
   sensor_height_: 2.0   # 01 -> 2.0
 
   min_dis_:  1.8  # /m   
-  max_dis_: 50.0  # /m  01 -> 50 on the highway
+  max_dis_: 80.0  # /m  01 -> 50 on the highway
 
   min_angle_: 0.0  # /deg
   max_angle_: 360.0

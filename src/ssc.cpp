@@ -409,7 +409,7 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         pcl::PointXYZI point_max = c.second.bounding_box.second;
         float diff_z = point_max.z - point_min.z;
         // if(point_min.z > 0.f || (c.second.occupy_pts.size() < toBeClass) || ((point_max.z - point_min.z) < point_max.z * 0.9) || (point_max.z < - sensor_height / 3 && diff_z < 0.2)){
-        if( (c.second.occupy_pts.size() < toBeClass) ){
+        if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass)){
             erase_id.emplace_back(c.first);
         }
         else{
@@ -438,12 +438,12 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
         }
         else{
             if(c.second.type == car || c.second.type == -1){
-                r = rng.uniform(20, 200);   // car is random color
-                g = rng.uniform(20, 200); 
-                b = rng.uniform(20, 200); 
-                // r = c.second.color[0];
-                // g = c.second.color[1];
-                // b = c.second.color[2];
+                // r = rng.uniform(20, 200);   // car is random color to test
+                // g = rng.uniform(20, 200); 
+                // b = rng.uniform(20, 200); 
+                r = c.second.color[0];
+                g = c.second.color[1];
+                b = c.second.color[2];
             }
             else if(c.second.type == building){  
                 r = 0.f;
@@ -782,22 +782,25 @@ void SSC::getPose(){
         }
     }
     else{  // TODO:
-        std::ifstream pose_file;
+        std::fstream pose_file;
         std:string line;
-        std::cout << 1 << std::endl;
         pose_file.open(pose_path, std::ios::in);
-        std::cout << 2 << std::endl;
-        int count = 0;
+        int count = 1;
         while(getline(pose_file, line)){
-            if(count < start || count >= end){
+            if(count < start){
+                count ++;
                 continue;
+            }
+            if(count >= end){
+                break;
             }
             std::vector<std::string> line_s;
             float pose_v[12];
             boost::split(line_s, line, boost::is_any_of(" "));
+            std::cout << "line: " << count << " ";
             for(int l = 0; l < line_s.size(); l++){
-                std::cout << line_s[l].c_str() << " ";
                 pose_v[l] = atof(line_s[l].c_str()); 
+                std::cout << pose_v[l] << " ";
             }
             std::cout << std::endl;
 
@@ -815,14 +818,14 @@ void SSC::getPose(){
             rotation(2, 0) = pose_v[8];
             rotation(2, 1) = pose_v[9];
             rotation(2, 2) = pose_v[10];
-            Eigen:: Vector3f rpy = rotationMatrixToEulerAngles(rotation);
+            Eigen::Vector3f rpy = rotation.eulerAngles(2,1,0);
+            // Eigen::Vector3f rpy = rotationMatrixToEulerAngles(rotation);
             pose.roll = rpy[0];
-            pose.yaw = rpy[1];
-            pose.pitch = rpy[2];
+            pose.pitch = rpy[1];
+            pose.yaw = rpy[2];
+            count ++;
 
             pose_vec.emplace_back(pose);
-            count ++;
-            std::cout << count << std::endl;
         }
     }
     
@@ -1190,35 +1193,35 @@ void SSC::segDF(){
         segment();
         recognize(frame_ssc);
         frame_set.emplace_back(frame_ssc);
-        saveSegCloud(frame_ssc, frame_ssc.cloud_use);
+        // saveSegCloud(frame_ssc, frame_ssc.cloud_use);
         reset();
         id ++;
         std::cout << "\n";
     }
 
-    // std::vector<Frame> frame_init;
-    // std::vector<Pose> pose_init;
-    // for(int i = 0; i < init; i++){
-    //     frame_init.emplace_back(frame_set[i]);
-    //     pose_init.emplace_back(pose_vec[i]);
-    // }
+    std::vector<Frame> frame_init;
+    std::vector<Pose> pose_init;
+    for(int i = 0; i < init; i++){
+        frame_init.emplace_back(frame_set[i]);
+        pose_init.emplace_back(pose_vec[i]);
+    }
 
-    // frame_based = intialization(frame_init, pose_init);
-    // saveSegCloud(frame_based, frame_based.cloud_use);
-    // std::cout << "\n";
+    frame_based = intialization(frame_init, pose_init);
+    saveSegCloud(frame_based, frame_based.cloud_use);
+    std::cout << "\n";
 
 
-    // int start_df = frame_based.id - start;
-    // for(int i = start_df ; i < frame_set.size() - 1; i++){
-    //     tracking(frame_set[i], frame_set[i + 1], pose_vec[i], pose_vec[i + 1]);
-    // }
+    int start_df = frame_based.id - start;
+    for(int i = start_df ; i < frame_set.size() - 1; i++){
+        tracking(frame_set[i], frame_set[i + 1], pose_vec[i], pose_vec[i + 1]);
+    }
 
-    // for(int i = i = start_df; i < frame_set.size() - 1; i++){
-    //     Eigen::Affine3f trans_i = pcl::getTransformation(pose_vec[i].x, pose_vec[i].y, pose_vec[i].z, pose_vec[i].roll, pose_vec[i].pitch, pose_vec[i].yaw);
-    //     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
-    //     transformCloud(frame_set[i].cloud_use, trans_i, cloud);
-    //     saveSegCloud(frame_set[i], cloud);
-    // }
+    for(int i = i = start_df; i < frame_set.size() - 1; i++){
+        Eigen::Affine3f trans_i = pcl::getTransformation(pose_vec[i].x, pose_vec[i].y, pose_vec[i].z, pose_vec[i].roll, pose_vec[i].pitch, pose_vec[i].yaw);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        transformCloud(frame_set[i].cloud_use, trans_i, cloud);
+        saveSegCloud(frame_set[i], cloud);
+    }
     
 }
 
