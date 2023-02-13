@@ -409,8 +409,8 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         pcl::PointXYZI point_min = c.second.bounding_box.first;
         pcl::PointXYZI point_max = c.second.bounding_box.second;
         float diff_z = point_max.z - point_min.z;
-        // if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2 && diff_z < 0.2)){  // parkinglot
-        if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2 && diff_z < 0.2)){ 
+        // if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2)){  // parkinglot
+        if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2)){ 
             erase_id.emplace_back(c.first);
         }
         else{
@@ -725,7 +725,7 @@ void SSC::recognize(Frame& frame_ssc_){
     TicToc recognize_t("recognize");
     const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double height = sensor_height / 3;
+    const double height = sensor_height / 2;
     for(auto& c : frame_ssc_.cluster_set){
         Feature eigen_f = getDescriptorByEigenValue(c.second.cloud);
         Eigen::MatrixXd eigen_f_11 = turnVec2Matrix(eigen_f.feature_values);
@@ -1160,8 +1160,14 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
 
             else if(remap_name.size() == 1){
                 std::unordered_map<int, std::vector<int>>::iterator it = remap_name.begin();
+                
+                // int pt_num = 0;
+                // for(auto& vp : it->second){
+                //     pt_num += frame_next_.hash_cloud[vp].ptIdx.size();
+                // }
 
                 if(((float)it->second.size() / (float)frame_next_.cluster_set[it->first].occupy_voxels.size()) < occupancy){
+                // if(((float)pt_num / (float)frame_next_.cluster_set[it->first].occupy_pts.size()) < occupancy){
                     if(frame_next_.cluster_set[it->first].type == car){
                         c.second.state = 1;
                         dynamic_num ++;

@@ -10,24 +10,24 @@ session:
   label_path_: "/home/fyx/ufo_hiahia/src/in/labels/"
   pose_path_: "/home/fyx/ufo_hiahia/src/in/poses.txt"
   init_: 5   # the num of frame to initialize
-  start_: 5  # the start index in dataset, please check it
-  end_: 20
+  start_: 50  # the start index in dataset, please check it
+  end_: 200
 
 ssc:
   calib_path_: "calib/"
   seg_path_: "seg/"
   pcd_path_: "pcd/"
 
-  sensor_height_: 1.73   # 01 -> 2.0
+  sensor_height_: 1.73   
 
   min_dis_:  1.8  # /m   
-  max_dis_: 60.0  # /m  01 -> 50 on the highway
+  max_dis_: 50.0  # /m  01 -> 50 on the highway
 
   min_angle_: 0.0  # /deg
   max_angle_: 360.0
 
   min_azimuth_: -30.0  # /deg
-  max_azimuth_: 60.0
+  max_azimuth_: 50.0
 
   range_res_: 0.4
   sector_res_: 1.2
@@ -38,12 +38,12 @@ ssc:
   correct_radius_: 0.3
   search_num_: 10
 
-  iteration_: 3
+  iteration_: 4
   toBeClass_: 6  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
   intensity_diff_: 3.0
   intensity_cov_: 2.0
-  occupancy_: 0.9
+  occupancy_: 1.0
 
   building_: 0  # cluster map
   tree_: 1
