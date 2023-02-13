@@ -20,6 +20,8 @@ public:
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_vec;
     std::vector<Pose> pose_vec;
 
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> g_cloud_vec;
+
     std::vector<PointAPRI> apri_vec;
     std::unordered_map<int, Voxel> hash_cloud;
     Frame frame_ssc;

@@ -18,10 +18,10 @@ ssc:
   seg_path_: "seg/"
   pcd_path_: "pcd/"
 
-  sensor_height_: 2.0   # 01 -> 2.0
+  sensor_height_: 1.73   # 01 -> 2.0
 
   min_dis_:  1.8  # /m   
-  max_dis_: 80.0  # /m  01 -> 50 on the highway
+  max_dis_: 60.0  # /m  01 -> 50 on the highway
 
   min_angle_: 0.0  # /deg
   max_angle_: 360.0
@@ -39,11 +39,11 @@ ssc:
   search_num_: 10
 
   iteration_: 3
-  toBeClass_: 5  # the min numbers of points to be one class
+  toBeClass_: 6  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
   intensity_diff_: 3.0
   intensity_cov_: 2.0
-  occupancy_: 0.8
+  occupancy_: 0.9
 
   building_: 0  # cluster map
   tree_: 1
@@ -51,6 +51,12 @@ ssc:
 
   # about semantic-label: https://github.com/PRBonn/semantic-kitti-api/blob/master/auxiliary/laserscan.py#L238 / https://ask.csdn.net/questions/7650597
   dynamic_label_: [252, 253, 254, 255, 256, 257, 258, 259]   # refer to semantic scan context
+
+  # https://blog.csdn.net/qq_18213223/article/details/104360634
+  tr_: [4.276802385584e-04, -9.999672484946e-01, -8.084491683471e-03, -1.198459927713e-02, 
+            -7.210626507497e-03, 8.081198471645e-03, -9.999413164504e-01, -5.403984729748e-02, 
+            9.999738645903e-01, 4.859485810390e-04, -7.206933692422e-03, -2.921968648686e-01,
+            0,                                         0,                                         0,                                             1                                       ]
 
 feature:
   kOneThird_: 0.333

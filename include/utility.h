@@ -225,7 +225,10 @@ public:
     int building;
     int tree;
     int car;
+
     std::vector<int> dynamic_label;
+    std::vector<float> tr_v;
+    Eigen::Matrix4f tr;
 
     double kOneThird;
     double kLinearityMax;
@@ -283,6 +286,8 @@ public:
         nh.param<int>("ssc/tree_", tree, 1);
         nh.param<int>("ssc/car_", car, 2);
         nh.param<std::vector<int>>("ssc/dynamic_label_", dynamic_label, std::vector<int>());
+        nh.param<std::vector<float>>("ssc/tr_", tr_v, std::vector<float>());
+        tr = Eigen::Map<const Eigen::Matrix<float, -1, -1, Eigen::RowMajor>>(tr_v.data(), 4, 4);
 
         nh.param<double>("feature/kOneThird_", kOneThird, 0.333);
         nh.param<double>("feature/kLinearityMax_",  kLinearityMax, 740.0);

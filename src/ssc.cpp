@@ -75,6 +75,7 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr SSC::extractGroudByPatchWork(const pcl::Poi
     double time_pw;
     pcl::PointCloud<pcl::PointXYZI>::Ptr g_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::PointCloud<pcl::PointXYZI>::Ptr ng_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    g_cloud_vec.emplace_back(g_cloud);
     PatchworkGroundSeg->set_sensor(sensor_height);
     PatchworkGroundSeg->estimate_ground(*cloudIn_, *g_cloud, *ng_cloud, time_pw);
     return ng_cloud;
@@ -186,9 +187,9 @@ void SSC::intensityVisualization(const pcl::PointCloud<pcl::PointXYZI>::Ptr& clo
             pt_rgb.b = 0.f;
         }
         else{
-            pt_rgb.r = pt_intensity;
+            pt_rgb.r = 0.f;
             pt_rgb.g = pt_intensity;
-            pt_rgb.b = 0.f;
+            pt_rgb.b = pt_intensity;
         }
         cloud_rgb->points.push_back(pt_rgb);
     }
@@ -216,8 +217,8 @@ void SSC::process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
 
     ROS_INFO("pre-process: time_use(ms): %0.2f, original pointcloud size: %d, valid pointcloud size: %d, apri_vec size: %d, hash_cloud size: %d", (float)process_t.toc(), (int)cloudIn_->points.size(), (int)cloud_use->points.size(), (int)apri_vec.size(), (int)hash_cloud.size());
 
-    // // visualize intensity
-    // intensityVisualization(ng_cloud);
+    // visualize intensity
+    intensityVisualization(ng_cloud);
 }
 
 void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
@@ -408,8 +409,8 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         pcl::PointXYZI point_min = c.second.bounding_box.first;
         pcl::PointXYZI point_max = c.second.bounding_box.second;
         float diff_z = point_max.z - point_min.z;
-        // if(point_min.z > 0.f || (c.second.occupy_pts.size() < toBeClass) || ((point_max.z - point_min.z) < point_max.z * 0.9) || (point_max.z < - sensor_height / 3 && diff_z < 0.2)){
-        if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass)){
+        // if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2 && diff_z < 0.2)){  // parkinglot
+        if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2 && diff_z < 0.2)){ 
             erase_id.emplace_back(c.first);
         }
         else{
@@ -700,7 +701,7 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     reg.setNumberOfNeighbours (toBeClass * 2);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (6.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setSmoothnessThreshold (10.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
     reg.setCurvatureThreshold (1.2);
 
     std::vector <pcl::PointIndices> clusters;
@@ -712,7 +713,7 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
         }
     }
 
-    if(plane_pts.size() >= cluster_cloud_->points.size() * 0.3){
+    if(plane_pts.size() >= cluster_cloud_->points.size() * 0.2){
         return true;
     }
     else{
@@ -730,7 +731,7 @@ void SSC::recognize(Frame& frame_ssc_){
         Eigen::MatrixXd eigen_f_11 = turnVec2Matrix(eigen_f.feature_values);
         Eigen::MatrixXd f_11 = eigen_f_11;
         
-        if(f_11(0, 8) > height && regionGrowing(c.second.cloud)){
+        if(f_11(0, 8) > height * 2 && regionGrowing(c.second.cloud)){
             f_11(0, 10) = (double)building;
             c.second.type = building;
             c.second.feature_matrix = f_11;
@@ -785,7 +786,19 @@ void SSC::getPose(){
         std::fstream pose_file;
         std:string line;
         pose_file.open(pose_path, std::ios::in);
-        int count = 1;
+        int count = 0;
+
+        // if(tr.size() != 12){
+        //     ROS_WARN("extrinsic velo to cam error");
+        //     ros::shutdown();
+        // }
+
+        // Eigen::Matrix4f trans;
+        // trans(0, 0) = tr[0]; trans(0, 1) = tr[1]; trans(0, 2) = tr[2]; trans(0, 3) = tr[3];
+        // trans(1, 0) = tr[4]; trans(1, 1) = tr[5]; trans(1, 2) = tr[6]; trans(1, 3) = tr[7];
+        // trans(2, 0) = tr[8]; trans(2, 1) = tr[9]; trans(2, 2) = tr[10]; trans(2, 3) = tr[11];
+        // trans(3, 0) = 0.0; trans(3, 1) = 0.0; trans(3, 2) = 0.0; trans(3, 3) = 1.0;
+
         while(getline(pose_file, line)){
             if(count < start){
                 count ++;
@@ -797,34 +810,61 @@ void SSC::getPose(){
             std::vector<std::string> line_s;
             float pose_v[12];
             boost::split(line_s, line, boost::is_any_of(" "));
-            std::cout << "line: " << count << " ";
+            // std::cout << "line: " << count << " ";
             for(int l = 0; l < line_s.size(); l++){
                 pose_v[l] = atof(line_s[l].c_str()); 
-                std::cout << pose_v[l] << " ";
+                // std::cout << pose_v[l] << " ";
             }
-            std::cout << std::endl;
+            // std::cout << std::endl;
 
+            Eigen::Matrix4f cam;
+            cam(0, 0) = pose_v[0]; cam(0, 1) = pose_v[1]; cam(0, 2) = pose_v[2]; cam(0, 3) = pose_v[3];
+            cam(1, 0) = pose_v[4]; cam(1, 1) = pose_v[5]; cam(1, 2) = pose_v[6]; cam(1, 3) = pose_v[7];
+            cam(2, 0) = pose_v[8]; cam(2, 1) = pose_v[9]; cam(2, 2) = pose_v[10]; cam(2, 3) = pose_v[11];
+            cam(3, 0) = 0.0; cam(3, 1) = 0.0; cam(3, 2) = 0.0; cam(3, 3) = 1.0;
+
+            Eigen::Matrix4f velo_to_cam = tr.inverse() * cam * tr;
             Pose pose;
-            pose.x = pose_v[3];
-            pose.y = pose_v[7];
-            pose.z = pose_v[11];
             Eigen::Matrix3f rotation;
-            rotation(0, 0) = pose_v[0];
-            rotation(0, 1) = pose_v[1];
-            rotation(0, 2) = pose_v[2];
-            rotation(1, 0) = pose_v[4];
-            rotation(1, 1) = pose_v[5];
-            rotation(1, 2) = pose_v[6];
-            rotation(2, 0) = pose_v[8];
-            rotation(2, 1) = pose_v[9];
-            rotation(2, 2) = pose_v[10];
-            Eigen::Vector3f rpy = rotation.eulerAngles(2,1,0);
-            // Eigen::Vector3f rpy = rotationMatrixToEulerAngles(rotation);
+            pose.x = velo_to_cam(0, 3);
+            pose.y = velo_to_cam(1, 3);
+            pose.z = velo_to_cam(2, 3);
+            rotation(0, 0) = velo_to_cam(0, 0);
+            rotation(0, 1) = velo_to_cam(0, 1);
+            rotation(0, 2) = velo_to_cam(0, 2);
+            rotation(1, 0) = velo_to_cam(1, 0);
+            rotation(1, 1) = velo_to_cam(1, 1);
+            rotation(1, 2) = velo_to_cam(1, 2);
+            rotation(2, 0) = velo_to_cam(2, 0);
+            rotation(2, 1) = velo_to_cam(2, 1);
+            rotation(2, 2) = velo_to_cam(2, 2);
+            Eigen::Vector3f rpy = rotationMatrixToEulerAngles(rotation);
+            // Eigen::Vector3f rpy = rotation.eulerAngles(2, 1, 0);  // there is error about .eulerAngles()
             pose.roll = rpy[0];
             pose.pitch = rpy[1];
             pose.yaw = rpy[2];
-            count ++;
+            
+            // Pose pose;
+            // Eigen::Matrix3f rotation;
+            // pose.x = pose_v[3];
+            // pose.y = pose_v[7];
+            // pose.z = pose_v[11];
+            // rotation(0, 0) = pose_v[0];
+            // rotation(0, 1) = pose_v[1];
+            // rotation(0, 2) = pose_v[2];
+            // rotation(1, 0) = pose_v[4];
+            // rotation(1, 1) = pose_v[5];
+            // rotation(1, 2) = pose_v[6];
+            // rotation(2, 0) = pose_v[8];
+            // rotation(2, 1) = pose_v[9];
+            // rotation(2, 2) = pose_v[10];
+            // Eigen::Vector3f rpy = rotation.eulerAngles(2,1,0);
+            // // Eigen::Vector3f rpy = rotationMatrixToEulerAngles(rotation);
+            // pose.roll = rpy[0];
+            // pose.pitch = rpy[1];
+            // pose.yaw = rpy[2];
 
+            count ++;
             pose_vec.emplace_back(pose);
         }
     }
@@ -892,32 +932,39 @@ void SSC::getCloud(){
             // std::cout << values_label.size() << std::endl;
             // addVec(labels, values_label);
 
-            raw_cloud->points.resize(num_points);
-            rgb_cloud->points.resize(num_points);
             for(uint32_t k = 0; k < num_points; k++){
-                raw_cloud->points[k].x = values_cloud[k * 4];
-                raw_cloud->points[k].y = values_cloud[k * 4 + 1];
-                raw_cloud->points[k].z = values_cloud[k * 4 + 2];
-                raw_cloud->points[k].intensity = values_cloud[k * 4 + 3];
+                if(values_label[k] &  0xFFFF == 0){  // unlabeled
+                    continue;
+                }
 
-                rgb_cloud->points[k].x = values_cloud[k * 4];
-                rgb_cloud->points[k].y = values_cloud[k * 4 + 1];
-                rgb_cloud->points[k].z = values_cloud[k * 4 + 2];
+                pcl::PointXYZI xyzi;
+                xyzi.x = values_cloud[k * 4];
+                xyzi.y = values_cloud[k * 4 + 1];
+                xyzi.z = values_cloud[k * 4 + 2];
+                xyzi.intensity = values_cloud[k * 4 + 3];
+
+                pcl::PointXYZRGB rgb;
+                rgb.x = values_cloud[k * 4];
+                rgb.y = values_cloud[k * 4 + 1];
+                rgb.z = values_cloud[k * 4 + 2];
                 
                 if(findNameInVec((values_label[k] &  0xFFFF), dynamic_label)){
-                    rgb_cloud->points[k].r = 255.f;
-                    rgb_cloud->points[k].g = 0.f;
-                    rgb_cloud->points[k].b = 0.f;
+                    rgb.r = 255.f;
+                    rgb.g = 0.f;
+                    rgb.b = 0.f;
                 }
                 else{
-                    rgb_cloud->points[k].r = 255.f;
-                    rgb_cloud->points[k].g = 255.f;
-                    rgb_cloud->points[k].b = 255.f;
+                    rgb.r = 100.f;
+                    rgb.g = 100.f;
+                    rgb.b = 100.f;
                 }
+                raw_cloud->points.emplace_back(xyzi);
+                rgb_cloud->points.emplace_back(rgb);
             }
             in_label.close();
             in_cloud.close();
             cloud_vec.emplace_back(raw_cloud);
+            // pcl::transformPointCloud(*rgb_cloud, *rgb_cloud, tr);
             saveCloud(rgb_cloud, pcd_save, i, "_semantickitti.pcd");
         }
 
@@ -1071,7 +1118,7 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
                 int azimuth_idx = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
                 int voxel_idx = azimuth_idx * range_num * sector_num + range_idx * sector_num + sector_idx;
 
-                std::vector<int> neighbor_vox = findVoxelNeighbors(range_idx, sector_idx, azimuth_idx, 1);
+                std::vector<int> neighbor_vox = findVoxelNeighbors(range_idx, sector_idx, azimuth_idx, search_c);
                 for(auto& n : neighbor_vox){
                     std::unordered_map<int, Voxel>::iterator it_find = frame_next_.hash_cloud.find(n);
                     if(it_find != frame_next_.hash_cloud.end() && it_find->second.label != -1){
