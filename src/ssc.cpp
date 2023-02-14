@@ -435,6 +435,9 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
     for(auto& c : frame_ssc.cluster_set){
         int r, g, b;
         if(c.second.state == 1){  // dynamic is red
+            if(mode == 3){
+                continue;
+            }
             r = 255.f;
             g = 0.f;
             b = 0.f;
@@ -458,9 +461,9 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
                 b = 0.f;
             }
             else if(c.second.type == tree){
-                r = 0.f;
-                g = 255.f;
-                b = 0.f;
+                r = 162.f;
+                g = 205.f;
+                b = 90.f;
             }
             else{
                 r = 255.f;
@@ -483,6 +486,10 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
         }
     }
     rgb_ptr->width = count;
+    pcl::VoxelGrid<pcl::PointXYZRGB> sample;  // downsampling
+    sample.setInputCloud(rgb_ptr);
+    sample.setLeafSize(0.05, 0.05, 0.05);
+    sample.filter(*rgb_ptr);
     saveCloud(rgb_ptr, path_, frame_ssc.id, "_seg.pcd");
 }
 
@@ -921,9 +928,9 @@ void SSC::getCloud(){
             // addVec(labels, values_label);
 
             for(uint32_t k = 0; k < num_points; k++){
-                // if(values_label[k] &  0xFFFF == 0){  // unlabeled
-                //     continue;
-                // }
+                if(values_label[k] &  0xFFFF == 0){  // unlabeled
+                    continue;
+                }
 
                 pcl::PointXYZI xyzi;
                 xyzi.x = values_cloud[k * 4];
@@ -942,9 +949,9 @@ void SSC::getCloud(){
                     rgb.b = 0.f;
                 }
                 else{
-                    rgb.r = 28.f;
-                    rgb.g = 28.f;
-                    rgb.b = 28.f;
+                    rgb.r = 205.f;
+                    rgb.g = 192.f;
+                    rgb.b = 176.f;
                 }
                 raw_cloud->points.emplace_back(xyzi);
                 rgb_cloud->points.emplace_back(rgb);
@@ -1282,27 +1289,27 @@ void SSC::segDF(){
         Eigen::Affine3f trans_i = pcl::getTransformation(pose_vec[i].x, pose_vec[i].y, pose_vec[i].z, pose_vec[i].roll, pose_vec[i].pitch, pose_vec[i].yaw);
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
         transformCloud(frame_set[i].cloud_use, trans_i, cloud);
-        saveSegCloud(frame_set[i], cloud, map_save, 2);
+        saveSegCloud(frame_set[i], cloud, map_save, 3);
 
         pcl::VoxelGrid<pcl::PointXYZI> sample2;  // downsampling
         sample2.setInputCloud(g_cloud_vec[i]);
-        sample2.setLeafSize(0.5, 0.5, 0.5);
+        sample2.setLeafSize(1.0, 1.0, 1.0);
         sample2.filter(*g_cloud_vec[i]);
 
-        transformCloud(g_cloud_vec[i], trans_i, g_cloud_vec[i]);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr g_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        transformCloud(g_cloud_vec[i], trans_i, g_cloud);
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb(new pcl::PointCloud<pcl::PointXYZRGB>());
-        for(size_t k = 0; k < g_cloud_vec[i]->points.size(); k++){
+        for(size_t k = 0; k < g_cloud->points.size(); k++){
             pcl::PointXYZRGB pt;
-            pt.x = g_cloud_vec[i]->points[k].x;
-            pt.y = g_cloud_vec[i]->points[k].y;
-            pt.z = g_cloud_vec[i]->points[k].z;
-            pt.r = 139.f;
-            pt.g = 95.f;
-            pt.b = 101.f;
+            pt.x = g_cloud->points[k].x;
+            pt.y = g_cloud->points[k].y;
+            pt.z = g_cloud->points[k].z;
+            pt.r = 255.f;
+            pt.g = 106.f;
+            pt.b = 106.f;
             rgb->points.push_back(pt);
         }
         saveCloud(rgb, map_save, frame_set[i].id, "_g.pcd");
-    }
-    
+    }   
 }
 
