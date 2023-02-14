@@ -4,19 +4,21 @@ common:
   save_: true
   mapping_init_: false
   is_pcd_: false
+  skip_: 3
 
 session:
   data_path_: "/home/fyx/ufo_hiahia/src/in/bins/"
   label_path_: "/home/fyx/ufo_hiahia/src/in/labels/"
   pose_path_: "/home/fyx/ufo_hiahia/src/in/poses.txt"
   init_: 5   # the num of frame to initialize
-  start_: 50  # the start index in dataset, please check it
-  end_: 200
+  start_: 1000  # the start index in dataset, please check it
+  end_: 1050
 
 ssc:
   calib_path_: "calib/"
   seg_path_: "seg/"
   pcd_path_: "pcd/"
+  map_path_: "map/"
 
   sensor_height_: 1.73   
 
@@ -27,7 +29,7 @@ ssc:
   max_angle_: 360.0
 
   min_azimuth_: -30.0  # /deg
-  max_azimuth_: 50.0
+  max_azimuth_: 60.0
 
   range_res_: 0.4
   sector_res_: 1.2
@@ -38,19 +40,19 @@ ssc:
   correct_radius_: 0.3
   search_num_: 10
 
-  iteration_: 4
+  iteration_: 3
   toBeClass_: 6  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
   intensity_diff_: 3.0
   intensity_cov_: 2.0
-  occupancy_: 1.0
+  occupancy_: 0.8
 
   building_: 0  # cluster map
   tree_: 1
   car_: 2
 
   # about semantic-label: https://github.com/PRBonn/semantic-kitti-api/blob/master/auxiliary/laserscan.py#L238 / https://ask.csdn.net/questions/7650597
-  dynamic_label_: [252, 253, 254, 255, 256, 257, 258, 259]   # refer to semantic scan context
+  dynamic_label_: [0, 252, 253, 254, 255, 256, 257, 258, 259]   # refer to semantic scan context
 
   # https://blog.csdn.net/qq_18213223/article/details/104360634
   tr_: [4.276802385584e-04, -9.999672484946e-01, -8.084491683471e-03, -1.198459927713e-02, 

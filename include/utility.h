@@ -187,6 +187,7 @@ public:
     bool save;
     bool mapping_init;
     bool is_pcd;
+    int skip;
 
     std::string data_path;
     std::string label_path;
@@ -198,6 +199,7 @@ public:
     std::string calib_path;
     std::string seg_path;
     std::string pcd_path;
+    std::string map_path;
  
     float sensor_height;
     float min_dis;
@@ -250,6 +252,7 @@ public:
         nh.param<bool>("common/save_", save, true);
         nh.param<bool>("common/mapping_init_", mapping_init, false);
         nh.param<bool>("common/is_pcd_", is_pcd, false);
+        nh.param<int>("common/skip_", skip, 2);
 
         nh.param<std::string>("session/data_path_", data_path, " ");
         nh.param<std::string>("session/label_path_", label_path, " ");
@@ -261,6 +264,7 @@ public:
         nh.param<std::string>("ssc/calib_path_", calib_path, " ");
         nh.param<std::string>("ssc/seg_path_", seg_path, " ");
         nh.param<std::string>("ssc/pcd_path_", pcd_path, " ");
+        nh.param<std::string>("ssc/map_path_", map_path, " ");
 
         nh.param<float>("ssc/sensor_height_", sensor_height, 2.0);
         nh.param<float>("ssc/min_dis_", min_dis, 0.0);

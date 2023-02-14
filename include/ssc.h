@@ -16,9 +16,11 @@ public:
     std::string calib_save;
     std::string seg_save;
     std::string pcd_save;
+    std::string map_save;
 
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_vec;
     std::vector<Pose> pose_vec;
+    std::vector<Eigen::Matrix4f> trans_vec;
 
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> g_cloud_vec;
 
@@ -58,7 +60,7 @@ public:
     void refineClusterByBoundingBox(Frame& frame_ssc_);
     void refineClusterByIntensity(Frame& frame_ssc);
     void getVoxelCloudFromHashCloud(std::unordered_map<int, Voxel>& hashCloud_);
-    void saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_);
+    void saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, const std::string& path_, int mode);
 
     // feature recognize
     void recognize(Frame& frame_ssc_);
@@ -76,6 +78,12 @@ public:
     void getPose();
     void getCloud();
     void segDF();
+
+    // tool
+    void getObjectToDetection(const Frame& frame_);
+    void getDynamic(const Frame& frame_);
+    void getStatic(const Frame& frame_);
+    void getTFAndPF(const pcl::PointCloud<pcl::PointXYZI>::Ptr& original_, const pcl::PointCloud<pcl::PointXYZI>::Ptr& result_);
 };
 
 

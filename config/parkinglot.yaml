@@ -4,6 +4,7 @@ common:
   save_: true
   mapping_init_: false
   is_pcd_: true
+  skip_: 1
 
 session:
   data_path_: "/home/fyx/ufo_hiahia/src/in/scans/"
@@ -16,6 +17,7 @@ session:
 ssc:
   calib_path_: "calib/"
   seg_path_: "seg/"
+  pcd_path_: "pcd/"
   map_path_: "map/"
 
   sensor_height_: 2.5

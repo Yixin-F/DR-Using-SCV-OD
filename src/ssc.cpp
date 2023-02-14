@@ -42,6 +42,8 @@ SSC::SSC(){
     fsmkdir(seg_save);
     pcd_save = out_path + pcd_path;
     fsmkdir(pcd_save);
+    map_save = out_path + map_path;
+    fsmkdir(map_save);
 
     std::cout << "----  SSC INITIALIZATION  ----" << "\n"
                        << "range_res: " << range_res << " sector_res: " << sector_res << " azimuth_res: " << azimuth_res << "\n"
@@ -425,7 +427,7 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
     }
 }
 
-void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_){
+void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, const std::string& path_, int mode){
     cv::RNG rng(12345);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
     rgb_ptr->height = 1;
@@ -439,17 +441,21 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
         }
         else{
             if(c.second.type == car || c.second.type == -1){
-                // r = rng.uniform(20, 200);   // car is random color to test
-                // g = rng.uniform(20, 200); 
-                // b = rng.uniform(20, 200); 
-                r = c.second.color[0];
-                g = c.second.color[1];
-                b = c.second.color[2];
+                if(mode == 1){
+                    r = rng.uniform(20, 200);   // car is random color to test
+                    g = rng.uniform(20, 200); 
+                    b = rng.uniform(20, 200); 
+                }
+                else if(mode == 2){
+                    r = c.second.color[0];
+                    g = c.second.color[1];
+                    b = c.second.color[2];
+                }
             }
             else if(c.second.type == building){  
-                r = 0.f;
-                g = 0.f;
-                b = 255.f;
+                r = 139.f;
+                g = 90.f;
+                b = 0.f;
             }
             else if(c.second.type == tree){
                 r = 0.f;
@@ -477,7 +483,7 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
         }
     }
     rgb_ptr->width = count;
-    saveCloud(rgb_ptr, seg_save, frame_ssc.id, "_seg.pcd");
+    saveCloud(rgb_ptr, path_, frame_ssc.id, "_seg.pcd");
 }
 
 void SSC::refineClusterByIntensity(Frame& frame_ssc){
@@ -561,7 +567,7 @@ void SSC::segment(){
 
     ROS_INFO("segment: time_use(ms): %0.2f, first cluster_num: %d, second cluster_num: %d, third cluster_num: %d", (float)segment_t.toc(), first_num, second_num, third_num);
 
-    saveSegCloud(frame_ssc, frame_ssc.cloud_use);
+    // saveSegCloud(frame_ssc, frame_ssc.cloud_use);
 }
 
 Feature SSC::getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_){
@@ -731,7 +737,7 @@ void SSC::recognize(Frame& frame_ssc_){
         Eigen::MatrixXd eigen_f_11 = turnVec2Matrix(eigen_f.feature_values);
         Eigen::MatrixXd f_11 = eigen_f_11;
         
-        if(f_11(0, 8) > height * 2 && regionGrowing(c.second.cloud)){
+        if(f_11(0, 8) > height && regionGrowing(c.second.cloud)){
             f_11(0, 10) = (double)building;
             c.second.type = building;
             c.second.feature_matrix = f_11;
@@ -800,7 +806,7 @@ void SSC::getPose(){
         // trans(3, 0) = 0.0; trans(3, 1) = 0.0; trans(3, 2) = 0.0; trans(3, 3) = 1.0;
 
         while(getline(pose_file, line)){
-            if(count < start){
+            if(count < start || (count - start) % skip != 0){
                 count ++;
                 continue;
             }
@@ -824,6 +830,7 @@ void SSC::getPose(){
             cam(3, 0) = 0.0; cam(3, 1) = 0.0; cam(3, 2) = 0.0; cam(3, 3) = 1.0;
 
             Eigen::Matrix4f velo_to_cam = tr.inverse() * cam * tr;
+            trans_vec.emplace_back(velo_to_cam);
             Pose pose;
             Eigen::Matrix3f rotation;
             pose.x = velo_to_cam(0, 3);
@@ -843,26 +850,6 @@ void SSC::getPose(){
             pose.roll = rpy[0];
             pose.pitch = rpy[1];
             pose.yaw = rpy[2];
-            
-            // Pose pose;
-            // Eigen::Matrix3f rotation;
-            // pose.x = pose_v[3];
-            // pose.y = pose_v[7];
-            // pose.z = pose_v[11];
-            // rotation(0, 0) = pose_v[0];
-            // rotation(0, 1) = pose_v[1];
-            // rotation(0, 2) = pose_v[2];
-            // rotation(1, 0) = pose_v[4];
-            // rotation(1, 1) = pose_v[5];
-            // rotation(1, 2) = pose_v[6];
-            // rotation(2, 0) = pose_v[8];
-            // rotation(2, 1) = pose_v[9];
-            // rotation(2, 2) = pose_v[10];
-            // Eigen::Vector3f rpy = rotation.eulerAngles(2,1,0);
-            // // Eigen::Vector3f rpy = rotationMatrixToEulerAngles(rotation);
-            // pose.roll = rpy[0];
-            // pose.pitch = rpy[1];
-            // pose.yaw = rpy[2];
 
             count ++;
             pose_vec.emplace_back(pose);
@@ -911,7 +898,8 @@ void SSC::getCloud(){
         }
 
         std::vector<uint32_t> labels;
-        for(size_t i = start; i < end; i++){
+        int it = 0;
+        for(size_t i = start; i < end; i = i + skip){
             pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());  // use in segDF
             pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());  // save
 
@@ -933,9 +921,9 @@ void SSC::getCloud(){
             // addVec(labels, values_label);
 
             for(uint32_t k = 0; k < num_points; k++){
-                if(values_label[k] &  0xFFFF == 0){  // unlabeled
-                    continue;
-                }
+                // if(values_label[k] &  0xFFFF == 0){  // unlabeled
+                //     continue;
+                // }
 
                 pcl::PointXYZI xyzi;
                 xyzi.x = values_cloud[k * 4];
@@ -954,18 +942,31 @@ void SSC::getCloud(){
                     rgb.b = 0.f;
                 }
                 else{
-                    rgb.r = 100.f;
-                    rgb.g = 100.f;
-                    rgb.b = 100.f;
+                    rgb.r = 28.f;
+                    rgb.g = 28.f;
+                    rgb.b = 28.f;
                 }
                 raw_cloud->points.emplace_back(xyzi);
                 rgb_cloud->points.emplace_back(rgb);
             }
             in_label.close();
             in_cloud.close();
+
+            pcl::VoxelGrid<pcl::PointXYZI> sample;  // downsampling
+            sample.setInputCloud(raw_cloud);
+            sample.setLeafSize(0.05, 0.05, 0.05);
+            sample.filter(*raw_cloud);
+
+            pcl::VoxelGrid<pcl::PointXYZRGB> sample2;  // downsampling
+            sample2.setInputCloud(rgb_cloud);
+            sample2.setLeafSize(0.1, 0.1, 0.1);
+            sample2.filter(*rgb_cloud);
+
             cloud_vec.emplace_back(raw_cloud);
-            // pcl::transformPointCloud(*rgb_cloud, *rgb_cloud, tr);
+
+            pcl::transformPointCloud(*rgb_cloud, *rgb_cloud, trans_vec[it]);
             saveCloud(rgb_cloud, pcd_save, i, "_semantickitti.pcd");
+            it ++;
         }
 
         // sampleVec(labels);
@@ -1174,34 +1175,42 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
                     }
                     else{
                         c.second.state = 0;
-                        Cluster cluster_new;
-                        cluster_new.track_id = c.second.track_id;
-                        cluster_new.name = frame_next_.max_name ++;
-                        // cluster_new.type = car;
-                        cluster_new.type = frame_next_.cluster_set[it->first].type;
-                        cluster_new.color[0] = c.second.color[0];
-                        cluster_new.color[1] = c.second.color[1];
-                        cluster_new.color[2] = c.second.color[2];
-                        cluster_new.occupy_voxels = it->second;
-                        reduceVec(frame_next_.cluster_set[it->first].occupy_voxels, cluster_new.occupy_voxels);
-                        for(auto& v : it->second){
-                            frame_next_.hash_cloud[v].label = cluster_new.name;
-                            addVec(cluster_new.occupy_pts, frame_next_.hash_cloud[v].ptIdx);
-                        }
-                        getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
-                        *cluster_new.cloud += *cluster;
-                        reduceVec(frame_next_.cluster_set[it->first].occupy_pts, cluster_new.occupy_pts);
-                        frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
-                        }    
+                        // Cluster cluster_new;
+                        // cluster_new.track_id = c.second.track_id;
+                        // cluster_new.name = frame_next_.max_name ++;
+                        // // cluster_new.type = car;
+                        // cluster_new.type = frame_next_.cluster_set[it->first].type;
+                        // cluster_new.color[0] = c.second.color[0];
+                        // cluster_new.color[1] = c.second.color[1];
+                        // cluster_new.color[2] = c.second.color[2];
+                        // cluster_new.occupy_voxels = it->second;
+                        // reduceVec(frame_next_.cluster_set[it->first].occupy_voxels, cluster_new.occupy_voxels);
+                        // for(auto& v : it->second){
+                        //     frame_next_.hash_cloud[v].label = cluster_new.name;
+                        //     addVec(cluster_new.occupy_pts, frame_next_.hash_cloud[v].ptIdx);
+                        // }
+                        // getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
+                        // *cluster_new.cloud += *cluster;
+                        // reduceVec(frame_next_.cluster_set[it->first].occupy_pts, cluster_new.occupy_pts);
+                        // frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
+                    }    
                 }
 
                 else{
-                    c.second.state = 0;
-                    frame_next_.cluster_set[it->first].track_id = c.second.track_id;
-                    *frame_next_.cluster_set[it->first].cloud += *cluster;
-                    frame_next_.cluster_set[it->first].color[0] = c.second.color[0];
-                    frame_next_.cluster_set[it->first].color[1] = c.second.color[1];
-                    frame_next_.cluster_set[it->first].color[2] = c.second.color[2];
+                    if(frame_next_.cluster_set[it->first].type == car){
+                        c.second.state = 0;
+                        frame_next_.cluster_set[it->first].track_id = c.second.track_id;
+                        *frame_next_.cluster_set[it->first].cloud += *cluster;
+                        frame_next_.cluster_set[it->first].color[0] = c.second.color[0];
+                        frame_next_.cluster_set[it->first].color[1] = c.second.color[1];
+                        frame_next_.cluster_set[it->first].color[2] = c.second.color[2];
+                    }
+                    // c.second.state = 0;
+                    // frame_next_.cluster_set[it->first].track_id = c.second.track_id;
+                    // *frame_next_.cluster_set[it->first].cloud += *cluster;
+                    // frame_next_.cluster_set[it->first].color[0] = c.second.color[0];
+                    // frame_next_.cluster_set[it->first].color[1] = c.second.color[1];
+                    // frame_next_.cluster_set[it->first].color[2] = c.second.color[2];
                 }
             }
 
@@ -1244,36 +1253,55 @@ void SSC::segDF(){
         ROS_INFO("frame %d is added into the segDF", id);
         process(cloud);
         segment();
+        saveSegCloud(frame_ssc, frame_ssc.cloud_use, seg_save, 1);
         recognize(frame_ssc);
         frame_set.emplace_back(frame_ssc);
-        // saveSegCloud(frame_ssc, frame_ssc.cloud_use);
         reset();
-        id ++;
+        id += skip;
         std::cout << "\n";
     }
 
-    std::vector<Frame> frame_init;
-    std::vector<Pose> pose_init;
-    for(int i = 0; i < init; i++){
-        frame_init.emplace_back(frame_set[i]);
-        pose_init.emplace_back(pose_vec[i]);
-    }
+    // std::vector<Frame> frame_init;
+    // std::vector<Pose> pose_init;
+    // for(int i = 0; i < init; i++){
+    //     frame_init.emplace_back(frame_set[i]);
+    //     pose_init.emplace_back(pose_vec[i]);
+    // }
 
-    frame_based = intialization(frame_init, pose_init);
-    saveSegCloud(frame_based, frame_based.cloud_use);
-    std::cout << "\n";
+    // frame_based = intialization(frame_init, pose_init);
+    // saveSegCloud(frame_based, frame_based.cloud_use);
+    // std::cout << "\n";
 
 
-    int start_df = frame_based.id - start;
-    for(int i = start_df ; i < frame_set.size() - 1; i++){
+    // int start_df = frame_based.id - start;
+    for(int i = 0 ; i < frame_set.size() - 1; i ++ ){
         tracking(frame_set[i], frame_set[i + 1], pose_vec[i], pose_vec[i + 1]);
     }
 
-    for(int i = i = start_df; i < frame_set.size() - 1; i++){
+    for(int i = 0; i < frame_set.size() - 1; i ++){
         Eigen::Affine3f trans_i = pcl::getTransformation(pose_vec[i].x, pose_vec[i].y, pose_vec[i].z, pose_vec[i].roll, pose_vec[i].pitch, pose_vec[i].yaw);
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
         transformCloud(frame_set[i].cloud_use, trans_i, cloud);
-        saveSegCloud(frame_set[i], cloud);
+        saveSegCloud(frame_set[i], cloud, map_save, 2);
+
+        pcl::VoxelGrid<pcl::PointXYZI> sample2;  // downsampling
+        sample2.setInputCloud(g_cloud_vec[i]);
+        sample2.setLeafSize(0.5, 0.5, 0.5);
+        sample2.filter(*g_cloud_vec[i]);
+
+        transformCloud(g_cloud_vec[i], trans_i, g_cloud_vec[i]);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb(new pcl::PointCloud<pcl::PointXYZRGB>());
+        for(size_t k = 0; k < g_cloud_vec[i]->points.size(); k++){
+            pcl::PointXYZRGB pt;
+            pt.x = g_cloud_vec[i]->points[k].x;
+            pt.y = g_cloud_vec[i]->points[k].y;
+            pt.z = g_cloud_vec[i]->points[k].z;
+            pt.r = 139.f;
+            pt.g = 95.f;
+            pt.b = 101.f;
+            rgb->points.push_back(pt);
+        }
+        saveCloud(rgb, map_save, frame_set[i].id, "_g.pcd");
     }
     
 }
