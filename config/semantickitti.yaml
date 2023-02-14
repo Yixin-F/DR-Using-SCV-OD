@@ -11,8 +11,8 @@ session:
   label_path_: "/home/fyx/ufo_hiahia/src/in/labels/"
   pose_path_: "/home/fyx/ufo_hiahia/src/in/poses.txt"
   init_: 5   # the num of frame to initialize
-  start_: 1000  # the start index in dataset, please check it
-  end_: 1050
+  start_: 10  # the start index in dataset, please check it
+  end_: 2750
 
 ssc:
   calib_path_: "calib/"

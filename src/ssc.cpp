@@ -219,8 +219,8 @@ void SSC::process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
 
     ROS_INFO("pre-process: time_use(ms): %0.2f, original pointcloud size: %d, valid pointcloud size: %d, apri_vec size: %d, hash_cloud size: %d", (float)process_t.toc(), (int)cloudIn_->points.size(), (int)cloud_use->points.size(), (int)apri_vec.size(), (int)hash_cloud.size());
 
-    // visualize intensity
-    intensityVisualization(ng_cloud);
+    // // visualize intensity
+    // intensityVisualization(ng_cloud);
 }
 
 void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
@@ -961,7 +961,7 @@ void SSC::getCloud(){
 
             pcl::VoxelGrid<pcl::PointXYZI> sample;  // downsampling
             sample.setInputCloud(raw_cloud);
-            sample.setLeafSize(0.05, 0.05, 0.05);
+            sample.setLeafSize(0.08, 0.08, 0.08);
             sample.filter(*raw_cloud);
 
             pcl::VoxelGrid<pcl::PointXYZRGB> sample2;  // downsampling
@@ -1305,8 +1305,8 @@ void SSC::segDF(){
             pt.y = g_cloud->points[k].y;
             pt.z = g_cloud->points[k].z;
             pt.r = 255.f;
-            pt.g = 106.f;
-            pt.b = 106.f;
+            pt.g = 222.f;
+            pt.b = 173.f;
             rgb->points.push_back(pt);
         }
         saveCloud(rgb, map_save, frame_set[i].id, "_g.pcd");
