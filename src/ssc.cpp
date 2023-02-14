@@ -219,8 +219,8 @@ void SSC::process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
 
     ROS_INFO("pre-process: time_use(ms): %0.2f, original pointcloud size: %d, valid pointcloud size: %d, apri_vec size: %d, hash_cloud size: %d", (float)process_t.toc(), (int)cloudIn_->points.size(), (int)cloud_use->points.size(), (int)apri_vec.size(), (int)hash_cloud.size());
 
-    // // visualize intensity
-    // intensityVisualization(ng_cloud);
+    // visualize intensity
+    intensityVisualization(ng_cloud);
 }
 
 void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
@@ -412,7 +412,7 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         pcl::PointXYZI point_max = c.second.bounding_box.second;
         float diff_z = point_max.z - point_min.z;
         // if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2)){  // parkinglot
-        if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2)){ 
+        if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2) || diff_z < 0.1){ 
             erase_id.emplace_back(c.first);
         }
         else{
@@ -449,7 +449,7 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
                     g = rng.uniform(20, 200); 
                     b = rng.uniform(20, 200); 
                 }
-                else if(mode == 2){
+                else{
                     r = c.second.color[0];
                     g = c.second.color[1];
                     b = c.second.color[2];
@@ -574,7 +574,6 @@ void SSC::segment(){
 
     ROS_INFO("segment: time_use(ms): %0.2f, first cluster_num: %d, second cluster_num: %d, third cluster_num: %d", (float)segment_t.toc(), first_num, second_num, third_num);
 
-    // saveSegCloud(frame_ssc, frame_ssc.cloud_use);
 }
 
 Feature SSC::getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_){
@@ -708,14 +707,14 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     normal_estimator.compute (*normals);
 
     pcl::RegionGrowing<pcl::PointXYZI, pcl::Normal> reg;
-    reg.setMinClusterSize (toBeClass * 4); 
+    reg.setMinClusterSize (toBeClass * 10); 
     reg.setMaxClusterSize (100000);
     reg.setSearchMethod (tree);
     reg.setNumberOfNeighbours (toBeClass * 2);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (10.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
-    reg.setCurvatureThreshold (1.2);
+    reg.setSmoothnessThreshold (7.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setCurvatureThreshold (1.0);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -738,13 +737,14 @@ void SSC::recognize(Frame& frame_ssc_){
     TicToc recognize_t("recognize");
     const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double height = sensor_height / 2;
+    const double height =  0.8;
+    const double diff_x = 8;
     for(auto& c : frame_ssc_.cluster_set){
         Feature eigen_f = getDescriptorByEigenValue(c.second.cloud);
         Eigen::MatrixXd eigen_f_11 = turnVec2Matrix(eigen_f.feature_values);
         Eigen::MatrixXd f_11 = eigen_f_11;
         
-        if(f_11(0, 8) > height && regionGrowing(c.second.cloud)){
+        if(regionGrowing(c.second.cloud)){
             f_11(0, 10) = (double)building;
             c.second.type = building;
             c.second.feature_matrix = f_11;
@@ -936,7 +936,7 @@ void SSC::getCloud(){
                 xyzi.x = values_cloud[k * 4];
                 xyzi.y = values_cloud[k * 4 + 1];
                 xyzi.z = values_cloud[k * 4 + 2];
-                xyzi.intensity = values_cloud[k * 4 + 3];
+                xyzi.intensity = values_cloud[k * 4 + 3] * max_intensity;
 
                 pcl::PointXYZRGB rgb;
                 rgb.x = values_cloud[k * 4];
@@ -966,7 +966,7 @@ void SSC::getCloud(){
 
             pcl::VoxelGrid<pcl::PointXYZRGB> sample2;  // downsampling
             sample2.setInputCloud(rgb_cloud);
-            sample2.setLeafSize(0.1, 0.1, 0.1);
+            sample2.setLeafSize(0.5, 0.5, 0.5);
             sample2.filter(*rgb_cloud);
 
             cloud_vec.emplace_back(raw_cloud);
