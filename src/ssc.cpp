@@ -432,24 +432,40 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
     rgb_ptr->height = 1;
     int count = 0;
+    // pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr_d(new pcl::PointCloud<pcl::PointXYZRGB>());
+    // rgb_ptr_d->height = 1;
+    // int count_d = 0;
     for(auto& c : frame_ssc.cluster_set){
         int r, g, b;
-        if(c.second.state == 1){  // dynamic is red
-            if(mode == 3){
+        if(c.second.state == 1){  
+            if(mode == 3){  // skip dynamic object
+                // for(size_t i = 0; i < c.second.occupy_pts.size(); i++){
+                //     pcl::PointXYZRGB pt_rgb;
+                //     pcl::PointXYZI pt = cloud_->points[c.second.occupy_pts[i]];
+                //     pt_rgb.x = pt.x;
+                //     pt_rgb.y = pt.y;
+                //     pt_rgb.z = pt.z;
+                //     pt_rgb.r = 255.f;
+                //     pt_rgb.g = 0.f;
+                //     pt_rgb.b = 0.f;
+                //     rgb_ptr_d->points.push_back(pt_rgb);
+                //     count_d ++;
+                // }
                 continue;
             }
-            r = 255.f;
+        
+            r = 255.f;  // dynamic is red
             g = 0.f;
             b = 0.f;
         }
         else{
             if(c.second.type == car || c.second.type == -1){
-                if(mode == 1){
+                if(mode == 1){  // random color
                     r = rng.uniform(20, 200);   // car is random color to test
                     g = rng.uniform(20, 200); 
                     b = rng.uniform(20, 200); 
                 }
-                else{
+                else{  // track  mode = 2
                     r = c.second.color[0];
                     g = c.second.color[1];
                     b = c.second.color[2];
@@ -491,6 +507,16 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
     sample.setLeafSize(0.05, 0.05, 0.05);
     sample.filter(*rgb_ptr);
     saveCloud(rgb_ptr, path_, frame_ssc.id, "_seg.pcd");
+
+    // if(mode == 3){
+    //     rgb_ptr_d->width = count_d;
+    //     pcl::VoxelGrid<pcl::PointXYZRGB> sample_d;  // downsampling
+    //     sample_d.setInputCloud(rgb_ptr_d);
+    //     sample_d.setLeafSize(0.05, 0.05, 0.05);
+    //     sample_d.filter(*rgb_ptr_d);
+    //     saveCloud(rgb_ptr_d, "/home/fyx/ufo_hiahia/src/test/", frame_ssc.id, "_dynamic.pcd");
+    // }
+    
 }
 
 void SSC::refineClusterByIntensity(Frame& frame_ssc){
@@ -707,14 +733,14 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     normal_estimator.compute (*normals);
 
     pcl::RegionGrowing<pcl::PointXYZI, pcl::Normal> reg;
-    reg.setMinClusterSize (toBeClass * 10); 
+    reg.setMinClusterSize (toBeClass * 15); 
     reg.setMaxClusterSize (100000);
     reg.setSearchMethod (tree);
     reg.setNumberOfNeighbours (toBeClass * 2);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
     reg.setSmoothnessThreshold (7.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
-    reg.setCurvatureThreshold (1.0);
+    reg.setCurvatureThreshold (0.6);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -737,7 +763,7 @@ void SSC::recognize(Frame& frame_ssc_){
     TicToc recognize_t("recognize");
     const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double height =  0.8;
+    const double height =  1.0;
     const double diff_x = 8;
     for(auto& c : frame_ssc_.cluster_set){
         Feature eigen_f = getDescriptorByEigenValue(c.second.cloud);
@@ -966,7 +992,7 @@ void SSC::getCloud(){
 
             pcl::VoxelGrid<pcl::PointXYZRGB> sample2;  // downsampling
             sample2.setInputCloud(rgb_cloud);
-            sample2.setLeafSize(0.5, 0.5, 0.5);
+            sample2.setLeafSize(0.08, 0.08, 0.08);
             sample2.filter(*rgb_cloud);
 
             cloud_vec.emplace_back(raw_cloud);
@@ -1126,34 +1152,34 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
                 int azimuth_idx = std::ceil((azimuth - min_azimuth) / azimuth_res) -1;
                 int voxel_idx = azimuth_idx * range_num * sector_num + range_idx * sector_num + sector_idx;
 
-                std::vector<int> neighbor_vox = findVoxelNeighbors(range_idx, sector_idx, azimuth_idx, search_c);
-                for(auto& n : neighbor_vox){
-                    std::unordered_map<int, Voxel>::iterator it_find = frame_next_.hash_cloud.find(n);
-                    if(it_find != frame_next_.hash_cloud.end() && it_find->second.label != -1){
-                        std::unordered_map<int, std::vector<int>>::iterator l_find = remap_name.find(it_find->second.label);
-                        if(l_find == remap_name.end()){
-                            std::vector<int> vec;
-                            vec.emplace_back(it_find->first);
-                            remap_name.insert(std::make_pair(it_find->second.label, vec));
-                        }
-                        else{
-                            l_find->second.emplace_back(it_find->first);
-                        }
-                    }
-                }
-
-                // std::unordered_map<int, Voxel>::iterator it_find = frame_next_.hash_cloud.find(voxel_idx);
-                // if(it_find != frame_next_.hash_cloud.end() && it_find->second.label != -1){
-                //     std::unordered_map<int, std::vector<int>>::iterator l_find = remap_name.find(it_find->second.label);
-                //     if(l_find == remap_name.end()){
-                //         std::vector<int> vec;
-                //         vec.emplace_back(it_find->first);
-                //         remap_name.insert(std::make_pair(it_find->second.label, vec));
-                //     }
-                //     else{
-                //         l_find->second.emplace_back(it_find->first);
+                // std::vector<int> neighbor_vox = findVoxelNeighbors(range_idx, sector_idx, azimuth_idx, search_c);
+                // for(auto& n : neighbor_vox){
+                //     std::unordered_map<int, Voxel>::iterator it_find = frame_next_.hash_cloud.find(n);
+                //     if(it_find != frame_next_.hash_cloud.end() && it_find->second.label != -1){
+                //         std::unordered_map<int, std::vector<int>>::iterator l_find = remap_name.find(it_find->second.label);
+                //         if(l_find == remap_name.end()){
+                //             std::vector<int> vec;
+                //             vec.emplace_back(it_find->first);
+                //             remap_name.insert(std::make_pair(it_find->second.label, vec));
+                //         }
+                //         else{
+                //             l_find->second.emplace_back(it_find->first);
+                //         }
                 //     }
                 // }
+
+                std::unordered_map<int, Voxel>::iterator it_find = frame_next_.hash_cloud.find(voxel_idx);
+                if(it_find != frame_next_.hash_cloud.end() && it_find->second.label != -1){
+                    std::unordered_map<int, std::vector<int>>::iterator l_find = remap_name.find(it_find->second.label);
+                    if(l_find == remap_name.end()){
+                        std::vector<int> vec;
+                        vec.emplace_back(it_find->first);
+                        remap_name.insert(std::make_pair(it_find->second.label, vec));
+                    }
+                    else{
+                        l_find->second.emplace_back(it_find->first);
+                    }
+                }
 
             }
 
@@ -1223,27 +1249,27 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
 
             else if(remap_name.size() > 1){
                 c.second.state = 0;
-                Cluster cluster_new;
-                cluster_new.track_id = c.second.track_id;
-                cluster_new.name = frame_next_.max_name ++;
-                cluster_new.type = car;
-                cluster_new.color[0] = c.second.color[0];
-                cluster_new.color[1] = c.second.color[1];
-                cluster_new.color[2] = c.second.color[2];
+            //     Cluster cluster_new;
+            //     cluster_new.track_id = c.second.track_id;
+            //     cluster_new.name = frame_next_.max_name ++;
+            //     cluster_new.type = car;
+            //     cluster_new.color[0] = c.second.color[0];
+            //     cluster_new.color[1] = c.second.color[1];
+            //     cluster_new.color[2] = c.second.color[2];
 
-                for(auto& re : remap_name){
-                    if(frame_next_.cluster_set[re.first].type == car && ((float)re.second.size() / (float)frame_next_.cluster_set[re.first].occupy_voxels.size()) >= occupancy){
-                        addVec(cluster_new.occupy_pts, frame_next_.cluster_set[re.first].occupy_pts);
-                        addVec(cluster_new.occupy_voxels, frame_next_.cluster_set[re.first].occupy_voxels);
-                        frame_next_.cluster_set.erase(re.first);
-                    }
-                }
-                getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
-                *cluster_new.cloud += *cluster;
-                for(auto& v : cluster_new.occupy_voxels){
-                    frame_next_.hash_cloud[v].label = cluster_new.name;
-                }
-                frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
+            //     for(auto& re : remap_name){
+            //         if(frame_next_.cluster_set[re.first].type == car && ((float)re.second.size() / (float)frame_next_.cluster_set[re.first].occupy_voxels.size()) >= occupancy){
+            //             addVec(cluster_new.occupy_pts, frame_next_.cluster_set[re.first].occupy_pts);
+            //             addVec(cluster_new.occupy_voxels, frame_next_.cluster_set[re.first].occupy_voxels);
+            //             frame_next_.cluster_set.erase(re.first);
+            //         }
+            //     }
+            //     getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
+            //     *cluster_new.cloud += *cluster;
+            //     for(auto& v : cluster_new.occupy_voxels){
+            //         frame_next_.hash_cloud[v].label = cluster_new.name;
+            //     }
+            //     frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
             }
     }
 
@@ -1293,11 +1319,13 @@ void SSC::segDF(){
 
         pcl::VoxelGrid<pcl::PointXYZI> sample2;  // downsampling
         sample2.setInputCloud(g_cloud_vec[i]);
-        sample2.setLeafSize(1.0, 1.0, 1.0);
+        // sample2.setLeafSize(1.0, 1.0, 1.0);
+        sample2.setLeafSize(0.08, 0.08, 0.08);
         sample2.filter(*g_cloud_vec[i]);
 
         pcl::PointCloud<pcl::PointXYZI>::Ptr g_cloud(new pcl::PointCloud<pcl::PointXYZI>());
         transformCloud(g_cloud_vec[i], trans_i, g_cloud);
+        // * g_cloud += * g_cloud_vec[i];
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb(new pcl::PointCloud<pcl::PointXYZRGB>());
         for(size_t k = 0; k < g_cloud->points.size(); k++){
             pcl::PointXYZRGB pt;
