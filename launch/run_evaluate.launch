@@ -1,0 +1,8 @@
+<launch>
+
+    <arg name="project" default="ufo"/>
+
+    <!--- evaluate -->
+    <node pkg="$(arg project)" type="$(arg project)_evaluate"   name="$(arg project)_evaluate"   output="screen"/>
+
+</launch>

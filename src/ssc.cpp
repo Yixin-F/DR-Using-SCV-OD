@@ -432,25 +432,25 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
     rgb_ptr->height = 1;
     int count = 0;
-    // pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr_d(new pcl::PointCloud<pcl::PointXYZRGB>());
-    // rgb_ptr_d->height = 1;
-    // int count_d = 0;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr_d(new pcl::PointCloud<pcl::PointXYZRGB>());
+    rgb_ptr_d->height = 1;
+    int count_d = 0;
     for(auto& c : frame_ssc.cluster_set){
         int r, g, b;
         if(c.second.state == 1){  
             if(mode == 3){  // skip dynamic object
-                // for(size_t i = 0; i < c.second.occupy_pts.size(); i++){
-                //     pcl::PointXYZRGB pt_rgb;
-                //     pcl::PointXYZI pt = cloud_->points[c.second.occupy_pts[i]];
-                //     pt_rgb.x = pt.x;
-                //     pt_rgb.y = pt.y;
-                //     pt_rgb.z = pt.z;
-                //     pt_rgb.r = 255.f;
-                //     pt_rgb.g = 0.f;
-                //     pt_rgb.b = 0.f;
-                //     rgb_ptr_d->points.push_back(pt_rgb);
-                //     count_d ++;
-                // }
+                for(size_t i = 0; i < c.second.occupy_pts.size(); i++){
+                    pcl::PointXYZRGB pt_rgb;
+                    pcl::PointXYZI pt = cloud_->points[c.second.occupy_pts[i]];
+                    pt_rgb.x = pt.x;
+                    pt_rgb.y = pt.y;
+                    pt_rgb.z = pt.z;
+                    pt_rgb.r = 255.f;
+                    pt_rgb.g = 0.f;
+                    pt_rgb.b = 0.f;
+                    rgb_ptr_d->points.push_back(pt_rgb);
+                    count_d ++;
+                }
                 continue;
             }
         
@@ -503,19 +503,19 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
     }
     rgb_ptr->width = count;
     pcl::VoxelGrid<pcl::PointXYZRGB> sample;  // downsampling
-    sample.setInputCloud(rgb_ptr);
-    sample.setLeafSize(0.05, 0.05, 0.05);
-    sample.filter(*rgb_ptr);
+    // sample.setInputCloud(rgb_ptr);
+    // sample.setLeafSize(0.05, 0.05, 0.05);
+    // sample.filter(*rgb_ptr);
     saveCloud(rgb_ptr, path_, frame_ssc.id, "_seg.pcd");
 
-    // if(mode == 3){
-    //     rgb_ptr_d->width = count_d;
-    //     pcl::VoxelGrid<pcl::PointXYZRGB> sample_d;  // downsampling
-    //     sample_d.setInputCloud(rgb_ptr_d);
-    //     sample_d.setLeafSize(0.05, 0.05, 0.05);
-    //     sample_d.filter(*rgb_ptr_d);
-    //     saveCloud(rgb_ptr_d, "/home/fyx/ufo_hiahia/src/test/", frame_ssc.id, "_dynamic.pcd");
-    // }
+    if(mode == 3){
+        rgb_ptr_d->width = count_d;
+        pcl::VoxelGrid<pcl::PointXYZRGB> sample_d;  // downsampling
+        sample_d.setInputCloud(rgb_ptr_d);
+        sample_d.setLeafSize(0.05, 0.05, 0.05);
+        sample_d.filter(*rgb_ptr_d);
+        saveCloud(rgb_ptr_d, "/home/fyx/ufo_hiahia/src/test/", frame_ssc.id, "_dynamic.pcd");
+    }
     
 }
 
@@ -733,14 +733,14 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     normal_estimator.compute (*normals);
 
     pcl::RegionGrowing<pcl::PointXYZI, pcl::Normal> reg;
-    reg.setMinClusterSize (toBeClass * 15); 
+    reg.setMinClusterSize (toBeClass * 20); 
     reg.setMaxClusterSize (100000);
     reg.setSearchMethod (tree);
     reg.setNumberOfNeighbours (toBeClass * 2);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (7.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
-    reg.setCurvatureThreshold (0.6);
+    reg.setSmoothnessThreshold (5.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setCurvatureThreshold (0.4);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -763,7 +763,7 @@ void SSC::recognize(Frame& frame_ssc_){
     TicToc recognize_t("recognize");
     const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double height =  1.0;
+    const double height =  1.2;
     const double diff_x = 8;
     for(auto& c : frame_ssc_.cluster_set){
         Feature eigen_f = getDescriptorByEigenValue(c.second.cloud);

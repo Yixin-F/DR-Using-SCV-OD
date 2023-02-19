@@ -94,5 +94,17 @@ target_link_libraries(${PROJECT_NAME}_ufo
   stdc++fs
 )
 
+# evaluate
+add_executable( ${PROJECT_NAME}_evaluate src/evaluate.cpp)
+add_dependencies(${PROJECT_NAME}_evaluate ${catkin_EXPORTED_TARGETS})
+target_compile_options(${PROJECT_NAME}_evaluate PRIVATE ${OpenMP_CXX_FLAGS})
+target_link_libraries(${PROJECT_NAME}_evaluate
+  ${catkin_LIBRARIES} 
+  ${PCL_LIBRARIES} 
+  ${OpenCV_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
+  ${YAML_CPP_LIBRARIES}
+  stdc++fs
+)
 
 

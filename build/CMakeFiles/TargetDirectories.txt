@@ -16,6 +16,7 @@
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/tf2_msgs_generate_messages_py.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/tf2_msgs_generate_messages_lisp.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/tf2_msgs_generate_messages_eus.dir
+/home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/ufo_evaluate.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/tf2_msgs_generate_messages_cpp.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/actionlib_msgs_generate_messages_py.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/actionlib_msgs_generate_messages_lisp.dir
