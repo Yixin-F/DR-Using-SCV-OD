@@ -62,6 +62,9 @@ SSC::SSC(){
 void SSC::allocateMemory(){
     PatchworkGroundSeg.reset(new PatchWork<pcl::PointXYZI>());
     cloud_use.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    cloud_original.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
+    cloud_dynamic.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
+    cloud_static.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
 }
 
 void SSC::reset(){
@@ -511,9 +514,11 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
     if(mode == 3){
         rgb_ptr_d->width = count_d;
         pcl::VoxelGrid<pcl::PointXYZRGB> sample_d;  // downsampling
-        sample_d.setInputCloud(rgb_ptr_d);
-        sample_d.setLeafSize(0.05, 0.05, 0.05);
-        sample_d.filter(*rgb_ptr_d);
+        // sample_d.setInputCloud(rgb_ptr_d);
+        // sample_d.setLeafSize(0.05, 0.05, 0.05);
+        // sample_d.filter(*rgb_ptr_d);
+        // *cloud_dynamic += *rgb_ptr_d;
+        // *cloud_static += *rgb_ptr;
         saveCloud(rgb_ptr_d, "/home/fyx/ufo_hiahia/src/test/", frame_ssc.id, "_dynamic.pcd");
     }
     
@@ -763,7 +768,7 @@ void SSC::recognize(Frame& frame_ssc_){
     TicToc recognize_t("recognize");
     const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double height =  1.2;
+    const double height =  1.0;  // 1.0
     const double diff_x = 8;
     for(auto& c : frame_ssc_.cluster_set){
         Feature eigen_f = getDescriptorByEigenValue(c.second.cloud);
@@ -980,7 +985,11 @@ void SSC::getCloud(){
                     rgb.b = 176.f;
                 }
                 raw_cloud->points.emplace_back(xyzi);
-                rgb_cloud->points.emplace_back(rgb);
+                float dis = pointDistance2d(rgb);
+                if(dis >= min_dis || dis <= max_dis){   // save distance restricted to evaluate
+                    rgb_cloud->points.emplace_back(rgb);
+                }
+                
             }
             in_label.close();
             in_cloud.close();
@@ -992,12 +1001,13 @@ void SSC::getCloud(){
 
             pcl::VoxelGrid<pcl::PointXYZRGB> sample2;  // downsampling
             sample2.setInputCloud(rgb_cloud);
-            sample2.setLeafSize(0.08, 0.08, 0.08);
+            sample2.setLeafSize(1.0, 1.0, 1.0);
             sample2.filter(*rgb_cloud);
 
             cloud_vec.emplace_back(raw_cloud);
 
             pcl::transformPointCloud(*rgb_cloud, *rgb_cloud, trans_vec[it]);
+            // *cloud_original += *rgb_cloud;
             saveCloud(rgb_cloud, pcd_save, i, "_semantickitti.pcd");
             it ++;
         }
@@ -1332,12 +1342,19 @@ void SSC::segDF(){
             pt.x = g_cloud->points[k].x;
             pt.y = g_cloud->points[k].y;
             pt.z = g_cloud->points[k].z;
-            pt.r = 255.f;
+            pt.r = 255.f;   // use for tracking
             pt.g = 222.f;
             pt.b = 173.f;
+            // pt.r = 0.f;  // use for evaluate
+            // pt.g = 255.f;
+            // pt.b = 127.f;
             rgb->points.push_back(pt);
         }
         saveCloud(rgb, map_save, frame_set[i].id, "_g.pcd");
     }   
+    // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/original.pcd", *cloud_original);
+    // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/static.pcd", *cloud_static);
+    // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/dynamic.pcd", *cloud_dynamic);
+
 }
 

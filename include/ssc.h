@@ -30,6 +30,11 @@ public:
 
     boost::shared_ptr<PatchWork<pcl::PointXYZI>> PatchworkGroundSeg;   // patchwork
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_use;  // noground cloud with intenisty calibrated
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_original;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_dynamic;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_static;
+
     
     Frame frame_based;  // mapping based frame
     int name = 0;  // record cluster tracked
