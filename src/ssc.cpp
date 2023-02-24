@@ -101,7 +101,8 @@ void SSC::intensityCalibrationByCurvature(pcl::PointCloud<pcl::PointXYZI>::Ptr& 
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_correct(new pcl::PointCloud<pcl::PointXYZI>());
     for(size_t i = 0; i < cloud_size; i++){
         pcl::PointXYZI pt = cloudIn_->points[i];
-        if(pt.z > (sensor_height / 3) || pointDistance2d(pt) > max_dis * correct_ratio){
+        // if(pt.z > (sensor_height / 3) || pointDistance2d(pt) > max_dis * correct_ratio){
+        if(0){
             continue;
         }
         else{
@@ -224,6 +225,9 @@ void SSC::process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
 
     // visualize intensity
     intensityVisualization(ng_cloud);
+
+    // record intensity
+    recordIntensity(frame_ssc);
 }
 
 void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
@@ -370,11 +374,14 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
 
 std::vector<int> SSC::findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_, int size_){
     std::vector<int> neighborIdxs;
+    if(range_idx_ > range_num * 0.5){
+        size_ = 1;
+    }
     for(int x = range_idx_ - size_; x <= range_idx_ + size_; x++){
         if(x > range_num -1 || x < 0) {continue;}
         for(int y = sector_idx_ - size_; y <= sector_idx_ + size_; y++){
             if(y > sector_num -1 || y < 0) {continue;}
-            for(int z = azimuth_idx_ - size_; z <= azimuth_idx_ + size_; z++){
+            for(int z = azimuth_idx_ - 1; z <= azimuth_idx_ + 1; z++){
                 if(z > azimuth_num - 1 || z < 0) {continue;}
                 neighborIdxs.emplace_back(x * sector_num + y + z * range_num * sector_num);  
             }
@@ -607,79 +614,91 @@ void SSC::segment(){
 
 }
 
-Feature SSC::getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_){
-    Eigen::Matrix3f covariance;	
-    Eigen::Vector4f centeroid;		
-    pcl::compute3DCentroid(*cluster_cloud_, centeroid);
-    pcl::computeCovarianceMatrix(*cluster_cloud_, centeroid, covariance);	
+Feature SSC::getDescriptorByEigenValue(const Cluster& cluster_){
+    // Eigen::Matrix3f covariance;	
+    // Eigen::Vector4f centeroid;		
+    // pcl::compute3DCentroid(*cluster_.cloud, centeroid);
+    // pcl::computeCovarianceMatrix(**cluster_.cloud, centeroid, covariance);	
 
-    // eigen value
-    constexpr bool compute_eigenvectors = false;
-    Eigen::EigenSolver<Eigen::Matrix3f> eigenvalues_solver(covariance, compute_eigenvectors);
-    std::vector<float> eigenvalues(3, 0.0);
-    eigenvalues.at(0) = eigenvalues_solver.eigenvalues()[0].real();
-    eigenvalues.at(1) = eigenvalues_solver.eigenvalues()[1].real();
-    eigenvalues.at(2) = eigenvalues_solver.eigenvalues()[2].real();
-    if(eigenvalues_solver.eigenvalues()[0].imag() != 0.0 || eigenvalues_solver.eigenvalues()[1].imag() != 0.0 || eigenvalues_solver.eigenvalues()[2].imag() != 0.0 ){
-        ROS_WARN("Eigenvalues should not have non-zero imaginary component");;
-        ROS_BREAK();
-    }
+    // // eigen value
+    // constexpr bool compute_eigenvectors = false;
+    // Eigen::EigenSolver<Eigen::Matrix3f> eigenvalues_solver(covariance, compute_eigenvectors);
+    // std::vector<float> eigenvalues(3, 0.0);
+    // eigenvalues.at(0) = eigenvalues_solver.eigenvalues()[0].real();
+    // eigenvalues.at(1) = eigenvalues_solver.eigenvalues()[1].real();
+    // eigenvalues.at(2) = eigenvalues_solver.eigenvalues()[2].real();
+    // if(eigenvalues_solver.eigenvalues()[0].imag() != 0.0 || eigenvalues_solver.eigenvalues()[1].imag() != 0.0 || eigenvalues_solver.eigenvalues()[2].imag() != 0.0 ){
+    //     ROS_WARN("Eigenvalues should not have non-zero imaginary component");;
+    //     ROS_BREAK();
+    // }
 
-    swap_if_gt(eigenvalues.at(0), eigenvalues.at(1));  // sort
-    swap_if_gt(eigenvalues.at(0), eigenvalues.at(2));
-    swap_if_gt(eigenvalues.at(1), eigenvalues.at(2));
+    // swap_if_gt(eigenvalues.at(0), eigenvalues.at(1));  // sort
+    // swap_if_gt(eigenvalues.at(0), eigenvalues.at(2));
+    // swap_if_gt(eigenvalues.at(1), eigenvalues.at(2));
 
-    double sum_eigenvalues = eigenvalues.at(0) + eigenvalues.at(1) + eigenvalues.at(2);
-    double e1 = eigenvalues.at(0) / sum_eigenvalues;
-    double e2 = eigenvalues.at(1) / sum_eigenvalues;
-    double e3 = eigenvalues.at(2) / sum_eigenvalues;
-    const double sum_of_eigenvalues = e1 + e2 + e3;
+    // double sum_eigenvalues = eigenvalues.at(0) + eigenvalues.at(1) + eigenvalues.at(2);
+    // double e1 = eigenvalues.at(0) / sum_eigenvalues;
+    // double e2 = eigenvalues.at(1) / sum_eigenvalues;
+    // double e3 = eigenvalues.at(2) / sum_eigenvalues;
+    // const double sum_of_eigenvalues = e1 + e2 + e3;
 
     Feature eigenvalue_feature("eigenvalue");  // add 8 features 
 
-    double linearity = std::fabs((e1 - e2) / e1 / kLinearityMax);
+    // double linearity = std::fabs((e1 - e2) / e1 / kLinearityMax);
+    double linearity = 1.0;
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("linearity", linearity));
     // std::cout << "linearity: " << linearity << std::endl;
 
-    double planarity = std::fabs((e2 - e3) / e1 / kPlanarityMax);
+    // double planarity = std::fabs((e2 - e3) / e1 / kPlanarityMax);
+    double planarity = 1.0;
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("planarity", planarity));
     // std::cout << "planarity: " << planarity << std::endl;
 
-    double scattering = std::fabs(e3 / e1 / kScatteringMax);
+    // double scattering = std::fabs(e3 / e1 / kScatteringMax);
+    double scattering = 1.0;
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("scattering", scattering));
     // std::cout << "scattering: " << scattering << std::endl;
 
-    double omnivariance = std::fabs(std::pow(e1 * e2 * e3, kOneThird) / kOmnivarianceMax);
+    // double omnivariance = std::fabs(std::pow(e1 * e2 * e3, kOneThird) / kOmnivarianceMax);
+    double omnivariance = 1.0;
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("omnivariance", omnivariance));
     // std::cout << "omnivariance: " << omnivariance << std::endl;
 
-    double anisotropy = std::fabs((e1 - e3) / e1 / kAnisotropyMax);
+    // double anisotropy = std::fabs((e1 - e3) / e1 / kAnisotropyMax);
+    double anisotropy = 1.0;
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("anisotropy", anisotropy));
     // std::cout << "anisotropy: " << anisotropy << std::endl;
 
-    double eigen_entropy = std::fabs((e1 * std::log(e1)) + (e2 * std::log(e2)) + (e3 * std::log(e3)) / kEigenEntropyMax);
+    // double eigen_entropy = std::fabs((e1 * std::log(e1)) + (e2 * std::log(e2)) + (e3 * std::log(e3)) / kEigenEntropyMax);
+    double eigen_entropy = 1.0;
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("eigen_entropy",eigen_entropy));
     // std::cout << "eigen_entropy: " << eigen_entropy << std::endl;
 
-    double change_of_curvature = std::fabs(e3 / sum_of_eigenvalues / kChangeOfCurvatureMax);
+    // double change_of_curvature = std::fabs(e3 / sum_of_eigenvalues / kChangeOfCurvatureMax);
+    double change_of_curvature = 1.0;
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("change_of_curvature", change_of_curvature));
     // std::cout << "change_of_curvature: " << change_of_curvature << std::endl;
 
-    std::pair<pcl::PointXYZI, pcl::PointXYZI> bounding_box = getBoundingBoxOfCloud(cluster_cloud_);
+    std::pair<pcl::PointXYZI, pcl::PointXYZI> bounding_box = cluster_.bounding_box;
     pcl::PointXYZI point_min = bounding_box.first;
     pcl::PointXYZI point_max = bounding_box.second;
     double diff_x, diff_y, diff_z;
     diff_x = point_max.x - point_min.x;
     diff_y = point_max.y - point_min.y;
     diff_z = point_max.z - point_min.z;
-    if(diff_z > diff_x || diff_z > diff_y){
-        eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 1));
-    }
-    else{
-        eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 0));
-    }
+    double square = diff_x * diff_y;
+    float max_angle = getPolarAngle(point_max);
+    float min_angle = getPolarAngle(point_min);
+    float angle_diff = std::fabs(max_angle - min_angle);
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", square));
+    // if(diff_z > diff_x || diff_z > diff_y){
+    //     eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 1));
+    // }
+    // else{
+    //     eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 0));
+    // }
 
-    eigenvalue_feature.feature_values.emplace_back(FeatureValue("max_z", point_max.z));
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("max_z", angle_diff));
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("min_z", point_min.z));
 
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("type", -1));
@@ -744,8 +763,8 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     reg.setNumberOfNeighbours (toBeClass * 2);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (5.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
-    reg.setCurvatureThreshold (0.4);
+    reg.setSmoothnessThreshold (8.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setCurvatureThreshold (0.6);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -756,7 +775,8 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
         }
     }
 
-    if(plane_pts.size() >= cluster_cloud_->points.size() * 0.2){
+    if(plane_pts.size() >= cluster_cloud_->points.size() * 0.3){
+    // if(plane_pts.size() >= 300){
         return true;
     }
     else{
@@ -768,30 +788,59 @@ void SSC::recognize(Frame& frame_ssc_){
     TicToc recognize_t("recognize");
     const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double height =  1.0;  // 1.0
+    const double max_z =  1.5;  // 
+    const double min_z =  - 0.5;  // must use min z !!
+    const double height =  3.0;  //  the size of car is too various
+    const double angle = 90.0;
+    const double square =  15.0;  // 
     const double diff_x = 8;
     for(auto& c : frame_ssc_.cluster_set){
-        Feature eigen_f = getDescriptorByEigenValue(c.second.cloud);
+        Feature eigen_f = getDescriptorByEigenValue(c.second);
         Eigen::MatrixXd eigen_f_11 = turnVec2Matrix(eigen_f.feature_values);
         Eigen::MatrixXd f_11 = eigen_f_11;
         
-        if(regionGrowing(c.second.cloud)){
-            f_11(0, 10) = (double)building;
-            c.second.type = building;
-            c.second.feature_matrix = f_11;
-        }
-        else{
-            if(f_11(0, 8) > height){
+        if(f_11(0, 8) > angle){
+            if(regionGrowing(c.second.cloud)){
+                f_11(0, 10) = (double)building;
+                c.second.type = building;
+                c.second.feature_matrix = f_11;
+            }
+            else{
                 f_11(0, 10) = (double)tree;
                 c.second.type = tree;
                 c.second.feature_matrix = f_11;
             }
-            else{
+        }
+        else{
+            if(f_11(0, 9) < min_z && f_11(0, 7) < square){
                 f_11(0, 10) = (double)car;
                 c.second.type = car;
                 c.second.feature_matrix = f_11;
             }
+            else{
+                f_11(0, 10) = (double)tree;
+                c.second.type = tree;
+                c.second.feature_matrix = f_11;
+            }
         }
+
+        // if(regionGrowing(c.second.cloud)){
+        //     f_11(0, 10) = (double)building;
+        //     c.second.type = building;
+        //     c.second.feature_matrix = f_11;
+        // }
+        // else{
+        //     if(f_11(0, 9) < min_z && (f_11(0, 8) - f_11(0, 9)) <  height && f_11(0, 7) < square){
+        //         f_11(0, 10) = (double)car;
+        //         c.second.type = car;
+        //         c.second.feature_matrix = f_11;
+        //     }
+        //     else{
+        //         f_11(0, 10) = (double)tree;
+        //         c.second.type = tree;
+        //         c.second.feature_matrix = f_11;
+        //     }
+        // }
         // std::cout << "feature_matrix: " << c.second.feature_matrix << std::endl;
     }
     ROS_INFO("recognize: time_use(ms): %0.2f", (float)recognize_t.toc());
@@ -1210,9 +1259,18 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
                 //     pt_num += frame_next_.hash_cloud[vp].ptIdx.size();
                 // }
 
-                if(((float)it->second.size() / (float)frame_next_.cluster_set[it->first].occupy_voxels.size()) < occupancy){
+                float ratio = (float)it->second.size() / (float)frame_next_.cluster_set[it->first].occupy_voxels.size();
+                if((ratio) < occupancy){
                 // if(((float)pt_num / (float)frame_next_.cluster_set[it->first].occupy_pts.size()) < occupancy){
                     if(frame_next_.cluster_set[it->first].type == car){
+
+
+                        // if(ratio < 0.1){
+                        //     c.second.state = 0;
+                        //     frame_next_.cluster_set[it->first].type == tree;
+                        // }
+
+
                         c.second.state = 1;
                         dynamic_num ++;
                     }
@@ -1358,3 +1416,36 @@ void SSC::segDF(){
 
 }
 
+void SSC::recordIntensity(const Frame& frame_){
+    ofstream w_av;
+    std::string av_path = calib_save + std::to_string(frame_.id) + "_av.txt";
+    w_av.open(av_path, std::ios::out);
+    ofstream w_cov;
+    std::string cov_path = calib_save + std::to_string(frame_.id) + "_cov.txt";
+    w_cov.open(cov_path, std::ios::out);
+    for(auto& v : frame_.hash_cloud){
+        Voxel vox = v.second;
+        int valid = 0;
+        float av = 0.0;
+        float cov = 0.0;
+        std::vector<int> neighbor_vox = findVoxelNeighbors(vox.range_idx, vox.sector_idx, vox.azimuth_idx, 1);
+        std::vector<float> in_r;
+        for(auto& id : neighbor_vox){
+            std::unordered_map<int, Voxel>::iterator it = frame_.hash_cloud.find(id);
+            if(it != frame_.hash_cloud.end()){
+                av += it->second.intensity_av;
+                in_r.emplace_back(it->second.intensity_av);
+                valid ++;
+            }
+        }
+        av /= valid;
+        for(auto& a : in_r){
+            cov += std::pow((a - av), 2);
+        }
+        cov /= valid;
+        w_av << av << " ";
+        w_cov << cov << " ";
+    }
+    w_av.close();
+    w_cov.close();
+}

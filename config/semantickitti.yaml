@@ -4,15 +4,15 @@ common:
   save_: true
   mapping_init_: false
   is_pcd_: false
-  skip_: 3
+  skip_: 4
 
 session:
-  data_path_: "/home/fyx/ufo_hiahia/src/in/bins/"
-  label_path_: "/home/fyx/ufo_hiahia/src/in/labels/"
-  pose_path_: "/home/fyx/ufo_hiahia/src/in/poses.txt"
+  data_path_: "/home/fyx/下载/02/velo/02/bins/"
+  label_path_: "/home/fyx/下载/02/02label/labels/"
+  pose_path_: "/home/fyx/下载/02/02label/poses.txt"
   init_: 5   # the num of frame to initialize
-  start_: 1325  # the start index in dataset, please check it
-  end_: 1375
+  start_: 860  # the start index in dataset, please check it
+  end_: 950
 
 ssc:
   calib_path_: "calib/"
@@ -22,7 +22,7 @@ ssc:
 
   sensor_height_: 1.73   
 
-  min_dis_:  1.8  # /m   
+  min_dis_:  1.5  # /m   
   max_dis_: 50.0  # /m  01 -> 50 on the highway
 
   min_angle_: 0.0  # /deg
@@ -40,12 +40,12 @@ ssc:
   correct_radius_: 0.3
   search_num_: 10
 
-  iteration_: 3
-  toBeClass_: 6  # the min numbers of points to be one class
+  iteration_: 2
+  toBeClass_: 10  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
-  intensity_diff_: 2.5
+  intensity_diff_: 3.0
   intensity_cov_: 1.0
-  occupancy_: 0.5
+  occupancy_: 0.4
 
   building_: 0  # cluster map
   tree_: 1

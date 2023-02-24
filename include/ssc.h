@@ -69,7 +69,7 @@ public:
 
     // feature recognize
     void recognize(Frame& frame_ssc_);
-    Feature getDescriptorByEigenValue(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
+    Feature getDescriptorByEigenValue(const Cluster& cluster_);
     Feature getDescriptorByEnsembleShape(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
     Eigen::MatrixXd getFeature21(const Eigen::MatrixXd& eigenvalue_matrix_, const Eigen::MatrixXd& ensembleshape_matrix_);
     bool regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_cloud_);
@@ -89,6 +89,7 @@ public:
     void getDynamic(const Frame& frame_);
     void getStatic(const Frame& frame_);
     void getTFAndPF(const pcl::PointCloud<pcl::PointXYZI>::Ptr& original_, const pcl::PointCloud<pcl::PointXYZI>::Ptr& result_);
+    void recordIntensity(const Frame& frame_);
 };
 
 
