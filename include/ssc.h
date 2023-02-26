@@ -89,7 +89,7 @@ public:
     void getDynamic(const Frame& frame_);
     void getStatic(const Frame& frame_);
     void getTFAndPF(const pcl::PointCloud<pcl::PointXYZI>::Ptr& original_, const pcl::PointCloud<pcl::PointXYZI>::Ptr& result_);
-    void recordIntensity(const Frame& frame_);
+    void recordIntensity(std::unordered_map<int, Voxel>& hash_);
 };
 
 

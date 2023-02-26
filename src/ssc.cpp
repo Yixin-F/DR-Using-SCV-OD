@@ -212,8 +212,8 @@ void SSC::process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
     pcl::PointCloud<pcl::PointXYZI>::Ptr ng_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     ng_cloud = extractGroudByPatchWork(cloudIn_);
 
-    // calibrate intensity by curvature
-    intensityCalibrationByCurvature(ng_cloud);
+    // // calibrate intensity by curvature
+    // intensityCalibrationByCurvature(ng_cloud);
 
     // make apri vec
     makeApriVec(ng_cloud);
@@ -227,7 +227,7 @@ void SSC::process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
     intensityVisualization(ng_cloud);
 
     // record intensity
-    recordIntensity(frame_ssc);
+    recordIntensity(hash_cloud);
 }
 
 void SSC::makeHashCloud(const std::vector<PointAPRI>& apriIn_){
@@ -374,7 +374,7 @@ void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::un
 
 std::vector<int> SSC::findVoxelNeighbors(const int& range_idx_, const int& sector_idx_, const int& azimuth_idx_, int size_){
     std::vector<int> neighborIdxs;
-    if(range_idx_ > range_num * 0.5){
+    if(range_idx_ > range_num * 0.6){
         size_ = 1;
     }
     for(int x = range_idx_ - size_; x <= range_idx_ + size_; x++){
@@ -791,8 +791,8 @@ void SSC::recognize(Frame& frame_ssc_){
     const double max_z =  1.5;  // 
     const double min_z =  - 0.5;  // must use min z !!
     const double height =  3.0;  //  the size of car is too various
-    const double angle = 90.0;
-    const double square =  15.0;  // 
+    const double angle = 120.0;
+    const double square =  20.0;  // 
     const double diff_x = 8;
     for(auto& c : frame_ssc_.cluster_set){
         Feature eigen_f = getDescriptorByEigenValue(c.second);
@@ -1276,6 +1276,7 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
                     }
                     else{
                         c.second.state = 0;
+                        c.second.type = frame_next_.cluster_set[it->first].type;
                         // Cluster cluster_new;
                         // cluster_new.track_id = c.second.track_id;
                         // cluster_new.name = frame_next_.max_name ++;
@@ -1317,27 +1318,27 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
 
             else if(remap_name.size() > 1){
                 c.second.state = 0;
-            //     Cluster cluster_new;
-            //     cluster_new.track_id = c.second.track_id;
-            //     cluster_new.name = frame_next_.max_name ++;
-            //     cluster_new.type = car;
-            //     cluster_new.color[0] = c.second.color[0];
-            //     cluster_new.color[1] = c.second.color[1];
-            //     cluster_new.color[2] = c.second.color[2];
+                Cluster cluster_new;
+                cluster_new.track_id = c.second.track_id;
+                cluster_new.name = frame_next_.max_name ++;
+                cluster_new.type = car;
+                cluster_new.color[0] = c.second.color[0];
+                cluster_new.color[1] = c.second.color[1];
+                cluster_new.color[2] = c.second.color[2];
 
-            //     for(auto& re : remap_name){
-            //         if(frame_next_.cluster_set[re.first].type == car && ((float)re.second.size() / (float)frame_next_.cluster_set[re.first].occupy_voxels.size()) >= occupancy){
-            //             addVec(cluster_new.occupy_pts, frame_next_.cluster_set[re.first].occupy_pts);
-            //             addVec(cluster_new.occupy_voxels, frame_next_.cluster_set[re.first].occupy_voxels);
-            //             frame_next_.cluster_set.erase(re.first);
-            //         }
-            //     }
-            //     getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
-            //     *cluster_new.cloud += *cluster;
-            //     for(auto& v : cluster_new.occupy_voxels){
-            //         frame_next_.hash_cloud[v].label = cluster_new.name;
-            //     }
-            //     frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
+                for(auto& re : remap_name){
+                    if(frame_next_.cluster_set[re.first].type == car && ((float)re.second.size() / (float)frame_next_.cluster_set[re.first].occupy_voxels.size()) >= occupancy){
+                        addVec(cluster_new.occupy_pts, frame_next_.cluster_set[re.first].occupy_pts);
+                        addVec(cluster_new.occupy_voxels, frame_next_.cluster_set[re.first].occupy_voxels);
+                        frame_next_.cluster_set.erase(re.first);
+                    }
+                }
+                getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
+                // *cluster_new.cloud += *cluster;
+                for(auto& v : cluster_new.occupy_voxels){
+                    frame_next_.hash_cloud[v].label = cluster_new.name;
+                }
+                frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
             }
     }
 
@@ -1416,36 +1417,41 @@ void SSC::segDF(){
 
 }
 
-void SSC::recordIntensity(const Frame& frame_){
+void SSC::recordIntensity(std::unordered_map<int, Voxel>& hash_){
+    static int idx = 0;
     ofstream w_av;
-    std::string av_path = calib_save + std::to_string(frame_.id) + "_av.txt";
+    std::string av_path = calib_save + std::to_string(idx) + "_av.txt";
     w_av.open(av_path, std::ios::out);
     ofstream w_cov;
-    std::string cov_path = calib_save + std::to_string(frame_.id) + "_cov.txt";
+    std::string cov_path = calib_save + std::to_string(idx) + "_cov.txt";
     w_cov.open(cov_path, std::ios::out);
-    for(auto& v : frame_.hash_cloud){
+    for(auto& v : hash_){
         Voxel vox = v.second;
-        int valid = 0;
-        float av = 0.0;
-        float cov = 0.0;
-        std::vector<int> neighbor_vox = findVoxelNeighbors(vox.range_idx, vox.sector_idx, vox.azimuth_idx, 1);
-        std::vector<float> in_r;
-        for(auto& id : neighbor_vox){
-            std::unordered_map<int, Voxel>::iterator it = frame_.hash_cloud.find(id);
-            if(it != frame_.hash_cloud.end()){
-                av += it->second.intensity_av;
-                in_r.emplace_back(it->second.intensity_av);
-                valid ++;
-            }
-        }
-        av /= valid;
-        for(auto& a : in_r){
-            cov += std::pow((a - av), 2);
-        }
-        cov /= valid;
-        w_av << av << " ";
-        w_cov << cov << " ";
+        // int valid = 0;
+        // float av = 0.0;
+        // float cov = 0.0;
+        // std::vector<int> neighbor_vox = findVoxelNeighbors(vox.range_idx, vox.sector_idx, vox.azimuth_idx, 1);
+        // std::vector<float> in_r;
+        // for(auto& id : neighbor_vox){
+        //     std::unordered_map<int, Voxel>::iterator it = hash_.find(id);
+        //     if(it != hash_.end()){
+        //         av += it->second.intensity_av;
+        //         in_r.emplace_back(it->second.intensity_av);
+        //         valid ++;/]
+
+        //     }
+        // }
+        // av /= valid;
+        // for(auto& a : in_r){
+        //     cov += std::pow((a - av), 2);
+        // }
+        // cov /= valid;
+        // w_av << av << "\t";
+        // w_cov << cov << "\t";
+        w_av << vox.intensity_av << "\t";
+        w_cov << vox.intensity_cov / 100<< "\t";
     }
     w_av.close();
     w_cov.close();
+    idx ++;
 }
