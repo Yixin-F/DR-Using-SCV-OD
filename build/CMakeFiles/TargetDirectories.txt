@@ -48,6 +48,7 @@
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/tf_generate_messages_cpp.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/std_msgs_generate_messages_lisp.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/sensor_msgs_generate_messages_cpp.dir
+/home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/ufo_remain.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/_catkin_empty_exported_target.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/sensor_msgs_generate_messages_eus.dir
 /home/fyx/ufo_hiahia/src/ufo/build/CMakeFiles/geometry_msgs_generate_messages_nodejs.dir

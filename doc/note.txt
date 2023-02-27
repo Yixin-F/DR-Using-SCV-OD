@@ -1,3 +1,4 @@
-kitti 02 frame 500 ~ 510 -> fig. segment   frame 509 frame 1953 frame 2753
-
-kitti 09 frame 1150 ~ 1210  frame 1350~1380
+seq.00 4350~4530               PR               RR                F1              time
+                0.4 
+ours                                                                                                                                (refineClusterByBoundingBox: -1.2 max_z to be dynamic, recognize: max_z 1.0  min_z -1.0 height 2.0 angle 120  square 20)
+                0.8

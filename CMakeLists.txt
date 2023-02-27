@@ -107,4 +107,17 @@ target_link_libraries(${PROJECT_NAME}_evaluate
   stdc++fs
 )
 
+# remain
+add_executable( ${PROJECT_NAME}_remain src/plotStatic.cpp)
+add_dependencies(${PROJECT_NAME}_remain ${catkin_EXPORTED_TARGETS})
+target_compile_options(${PROJECT_NAME}_remain PRIVATE ${OpenMP_CXX_FLAGS})
+target_link_libraries(${PROJECT_NAME}_remain
+  ${catkin_LIBRARIES} 
+  ${PCL_LIBRARIES} 
+  ${OpenCV_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
+  ${YAML_CPP_LIBRARIES}
+  stdc++fs
+)
+
 

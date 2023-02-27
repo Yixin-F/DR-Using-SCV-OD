@@ -438,9 +438,14 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         pcl::PointXYZI point_max = c.second.bounding_box.second;
         float diff_z = point_max.z - point_min.z;
         // if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2)){  // parkinglot
-        if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2) || diff_z < 0.1){ 
+        if(point_min.z > -0.f ||  (c.second.occupy_pts.size() < toBeClass) || diff_z < 0.2){ 
             erase_id.emplace_back(c.first);
-            frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
+            if(point_max.z < refine_height){
+                frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
+            }{
+                frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
+            }
+            
         }
         else{
             continue;
@@ -548,7 +553,7 @@ void SSC::saveSegCloud(Frame& frame_ssc_, const pcl::PointCloud<pcl::PointXYZI>:
         // sample_d.filter(*rgb_ptr_d);
         // *cloud_dynamic += *rgb_ptr_d;
         // *cloud_static += *rgb_ptr;
-        // saveCloud(rgb_ptr_d, "/home/fyx/ufo_hiahia/src/test/", frame_ssc_.id, "_dynamic.pcd");   // TODO: TP
+        saveCloud(rgb_ptr_d, "/home/fyx/ufo_hiahia/src/test/", frame_ssc_.id, "_dynamic.pcd");   // TODO: TP
     }
     
 }
@@ -785,14 +790,14 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     normal_estimator.compute (*normals);
 
     pcl::RegionGrowing<pcl::PointXYZI, pcl::Normal> reg;
-    reg.setMinClusterSize (toBeClass * 20); 
+    reg.setMinClusterSize (toBeClass * 10); 
     reg.setMaxClusterSize (100000);
     reg.setSearchMethod (tree);
     reg.setNumberOfNeighbours (toBeClass * 2);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (8.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
-    reg.setCurvatureThreshold (0.6);
+    reg.setSmoothnessThreshold (10.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setCurvatureThreshold (0.8);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -816,18 +821,18 @@ void SSC::recognize(Frame& frame_ssc_){
     TicToc recognize_t("recognize");
     const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double max_z =  1.73;  // 
-    const double min_z =  - 0.8;  // must use min z !!
-    const double height =  2.5;  //  the size of car is too various
-    const double angle = 120.0;
-    const double square =  20.0;  // 
+    // const double max_z =  1.0;  // 
+    // const double min_z =  - 1.0;  // must use min z !!
+    // const double height =  2.0;  //  the size of car is too various
+    // const double angle = 120.0;
+    // const double square =  20.0;  // 
     const double diff_x = 8;
     for(auto& c : frame_ssc_.cluster_set){
         Feature eigen_f = getDescriptorByEigenValue(c.second);
         Eigen::MatrixXd eigen_f_11 = turnVec2Matrix(eigen_f.feature_values);
         Eigen::MatrixXd f_11 = eigen_f_11;
         
-        if(f_11(0, 8) > angle){
+        if(f_11(0, 8) > car_angle / 2){
             if(regionGrowing(c.second.cloud)){
                 f_11(0, 10) = (double)building;
                 c.second.type = building;
@@ -840,7 +845,7 @@ void SSC::recognize(Frame& frame_ssc_){
             }
         }
         else{
-            if(f_11(0, 9) < min_z && f_11(0, 7) < square && f_11(0, 6) < max_z){
+            if(f_11(0, 9) < min_z && f_11(0, 7) < car_square && f_11(0, 6) < max_z){
                 f_11(0, 10) = (double)car;
                 c.second.type = car;
                 c.second.feature_matrix = f_11;
@@ -1503,7 +1508,7 @@ void SSC::segDF(){
     getCloudByVec(cloud_eva_ori, static_id, evaluate_static);
 
     saveCloud(cloud_eva_ori, evaluate_save, 666, "_original.pcd");
-    // saveCloud(cloud_eva_static, evaluate_save, 666, "_static.pcd");
+    // saveCloud(cloud_eva_static, evaluate_save, 666, "_old_static.pcd");
     saveCloud(evaluate_static, evaluate_save, 666, "_static.pcd");
     saveCloud(cloud_eva_dynamic, evaluate_save, 666, "_dynamic.pcd");
     std::cout << "done..." << std::endl;

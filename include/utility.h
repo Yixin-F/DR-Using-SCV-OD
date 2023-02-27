@@ -216,6 +216,12 @@ public:
     float range_res;
     float sector_res;
     float azimuth_res;
+    float refine_height;
+    float max_z;
+    float min_z;
+    float car_angle;
+    float car_height;
+    float car_square;
 
     float max_intensity;
     float correct_ratio;
@@ -284,6 +290,14 @@ public:
         nh.param<float>("ssc/range_res_", range_res, 0.2);
         nh.param<float>("ssc/sector_res_", sector_res, 1.2);
         nh.param<float>("ssc/azimuth_res_", azimuth_res, 2.0);
+        nh.param<float>("ssc/refine_height_", refine_height, -1.0);
+        nh.param<float>("ssc/max_z_", max_z, 1.0);
+        nh.param<float>("ssc/min_z_", min_z, -1.0);
+        nh.param<float>("ssc/car_angle_", car_angle, 120.0);
+        nh.param<float>("ssc/car_height_", car_height, 2.0);
+        nh.param<float>("ssc/car_square_", car_square, 2.0);
+
+
         nh.param<float>("ssc/max_intensity_", max_intensity, 200.0);
         nh.param<float>("ssc/correct_radius_", correct_radius, 0.5);
         nh.param<float>("ssc/correct_ratio_", correct_ratio, 0.5);

@@ -4,7 +4,7 @@ common:
   save_: true
   mapping_init_: false
   is_pcd_: false
-  skip_: 5
+  skip_: 4
 
 session:
   data_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/00/velodyne/"
@@ -22,6 +22,12 @@ ssc:
   evaluate_path_: "evaluate/"
 
   sensor_height_: 1.73   
+  refine_height_: 0.0
+  max_z_: 1.0
+  min_z_: -1.0
+  car_angle_: 120.0
+  car_height_: 2.0
+  car_square_: 30.0
 
   min_dis_:  1.5  # /m   
   max_dis_: 50.0  # /m  01 -> 50 on the highway
@@ -44,7 +50,7 @@ ssc:
   iteration_: 2
   toBeClass_: 10  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
-  intensity_diff_: 3.0
+  intensity_diff_: 2.0
   intensity_cov_: 1.0
   occupancy_: 0.4
 
