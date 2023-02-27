@@ -438,9 +438,9 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         pcl::PointXYZI point_max = c.second.bounding_box.second;
         float diff_z = point_max.z - point_min.z;
         // if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2)){  // parkinglot
-        if(point_min.z > -0.f ||  (c.second.occupy_pts.size() < toBeClass) || diff_z < 0.2){ 
+        if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || diff_z < 0.2){ 
             erase_id.emplace_back(c.first);
-            if(point_max.z < refine_height){
+            if(point_min.z < 0.f){
                 frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
             }{
                 frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
@@ -796,8 +796,8 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     reg.setNumberOfNeighbours (toBeClass * 2);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (10.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
-    reg.setCurvatureThreshold (0.8);
+    reg.setSmoothnessThreshold (8.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setCurvatureThreshold (0.6);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -832,7 +832,7 @@ void SSC::recognize(Frame& frame_ssc_){
         Eigen::MatrixXd eigen_f_11 = turnVec2Matrix(eigen_f.feature_values);
         Eigen::MatrixXd f_11 = eigen_f_11;
         
-        if(f_11(0, 8) > car_angle / 2){
+        if(f_11(0, 8) > car_angle){
             if(regionGrowing(c.second.cloud)){
                 f_11(0, 10) = (double)building;
                 c.second.type = building;
@@ -1092,12 +1092,12 @@ void SSC::getCloud(){
 
             pcl::VoxelGrid<pcl::PointXYZRGB> sample2;  // downsampling
             sample2.setInputCloud(rgb_cloud);
-            sample2.setLeafSize(0.08, 0.08, 0.08);
+            sample2.setLeafSize(0.2, 0.2, 0.2);
             sample2.filter(*rgb_cloud);
 
             pcl::VoxelGrid<pcl::PointXYZI> sample3;  // TODO: evaluate
             sample3.setInputCloud(ori_cloud);
-            sample3.setLeafSize(0.08, 0.08, 0.08);
+            sample3.setLeafSize(0.1, 0.1, 0.1);
             sample3.filter(*ori_cloud);
 
             cloud_vec.emplace_back(raw_cloud);
@@ -1496,8 +1496,10 @@ void SSC::segDF(){
         std::vector<int> id;
         std::vector<float> dis;
         kd_tree.nearestKSearch(pt, 1, id, dis);
-        if(0){
-        // if(findNameInVec((cloud_eva_ori->points[id[0]].intensity &  0xFFFF), dynamic_label)){
+        uint32_t label = static_cast<uint32_t>(cloud_eva_ori->points[id[0]].intensity);
+        // if(findNameInVec((label & 0xFFFF), dynamic_label)){
+        if((label & 0xFFFF) == 252 || (label & 0xFFFF) > 259){
+            // std::cout << (label & 0xFFFF ) << " ";
             continue;
         }
         else{

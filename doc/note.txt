@@ -1,4 +1,21 @@
-seq.00 4350~4530               PR               RR                F1              time
-                0.4 
-ours                                                                                                                                (refineClusterByBoundingBox: -1.2 max_z to be dynamic, recognize: max_z 1.0  min_z -1.0 height 2.0 angle 120  square 20)
-                0.8
+seq.00 4320~4535  (view1: (0, 0, 0) view2: (-57, -2, -4))             PR               RR                F1              time(ms)
+                                                0.4                                                                  98.81          94.53         0.9662
+                ours                                                                                                                                                                213.67                      (skip: 5, refine_height: -0.2, max_z: 0.8, min_z: -1.2, car_height: 2.0, car_angle: 120, car_square: 30)
+                                                0.8                                                                  98.45          95.28         0.9686
+                
+                erasor                        
+
+                                            =====
+                removert
+                                            =====
+
+seq.01 120 ~ 270 (view1: (0, 0, -50) view2: ())
+                                                0.4
+                ours                                                                                                                                                                                                    (skip: 5, refine_height: 1.5, max_z: 1.5, min_z: -1.0, car_height: 2.0, car_angle: 140, car_square: 30)
+                                                0.8                      
+
+
+seq.02 820 ~ 980
+                                               0.4                                                                  98.52          96.12           0.9704
+                ours                                                                                                                                                                                                    (skip: 5, refine_height: 0.0, max_z: 2.5, min_z: -0.5, car_height: 2.0, car_angle: 120, car_square: 30)
+                                                0.8                      

@@ -4,15 +4,15 @@ common:
   save_: true
   mapping_init_: false
   is_pcd_: false
-  skip_: 4
+  skip_: 5
 
 session:
-  data_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/00/velodyne/"
-  label_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/00/labels/"
-  pose_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/00/poses.txt"
-  init_: 4   # the num of frame to initialize
-  start_: 4350  # the start index in dataset, please check it
-  end_: 4530
+  data_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/02/velodyne/"
+  label_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/02/labels/"
+  pose_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/02/poses.txt"
+  init_: 5   # the num of frame to initialize
+  start_: 820  # the start index in dataset, please check it
+  end_: 980
 
 ssc:
   calib_path_: "calib/"
@@ -23,8 +23,8 @@ ssc:
 
   sensor_height_: 1.73   
   refine_height_: 0.0
-  max_z_: 1.0
-  min_z_: -1.0
+  max_z_: 2.5
+  min_z_: 0.0
   car_angle_: 120.0
   car_height_: 2.0
   car_square_: 30.0
@@ -38,7 +38,7 @@ ssc:
   min_azimuth_: -40.0  # /deg
   max_azimuth_: 80.0
 
-  range_res_: 0.3
+  range_res_: 0.4
   sector_res_: 1.2
   azimuth_res_: 2.0
 
@@ -52,7 +52,7 @@ ssc:
   search_c_: 2  # > 1, 2
   intensity_diff_: 2.0
   intensity_cov_: 1.0
-  occupancy_: 0.4
+  occupancy_: 0.8
 
   building_: 0  # cluster map
   tree_: 1

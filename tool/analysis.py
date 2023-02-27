@@ -155,7 +155,7 @@ def calc_naive_preservation(gt, estimate, dists, indices, voxelsize):
     return num_preserved, num_static_preserved, num_dynamic_preserved
 
 
-def evaluate(gt, estimate, voxelsize=0.2):
+def evaluate(gt, estimate, voxelsize=0.15):
     # 0. print current state
     num_gt = count_static_and_dynamic(gt.pc_data['intensity'])
     num_estimate = count_static_and_dynamic(estimate.pc_data['intensity'])
