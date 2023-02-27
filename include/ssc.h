@@ -17,6 +17,7 @@ public:
     std::string seg_save;
     std::string pcd_save;
     std::string map_save;
+    std::string evaluate_save;
 
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_vec;
     std::vector<Pose> pose_vec;
@@ -34,6 +35,11 @@ public:
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_original;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_dynamic;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_static;
+
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> eva_ori;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_eva_ori;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_eva_static;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_eva_dynamic;
 
     
     Frame frame_based;  // mapping based frame

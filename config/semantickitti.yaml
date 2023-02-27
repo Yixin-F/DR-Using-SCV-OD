@@ -19,6 +19,7 @@ ssc:
   seg_path_: "seg/"
   pcd_path_: "pcd/"
   map_path_: "map/"
+  evaluate_path_: "evaluate/"
 
   sensor_height_: 1.73   
 
@@ -31,7 +32,7 @@ ssc:
   min_azimuth_: -40.0  # /deg
   max_azimuth_: 80.0
 
-  range_res_: 0.4
+  range_res_: 0.3
   sector_res_: 1.2
   azimuth_res_: 2.0
 

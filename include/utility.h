@@ -178,6 +178,10 @@ struct Frame{
     std::unordered_map<int, Voxel> hash_cloud;
     pcl::PointCloud<pcl::PointXYZI>::Ptr vox_cloud;  // voxel cloud
     std::unordered_map<int, Cluster> cluster_set;
+
+    // for evaluate
+    std::vector<std::vector<int>> static_pt;
+    std::vector<std::vector<int>> dynamic_pt;
 };
 
 class Utility{
@@ -200,6 +204,7 @@ public:
     std::string seg_path;
     std::string pcd_path;
     std::string map_path;
+    std::string evaluate_path;
  
     float sensor_height;
     float min_dis;
@@ -257,6 +262,8 @@ public:
         nh.param<std::string>("session/data_path_", data_path, " ");
         nh.param<std::string>("session/label_path_", label_path, " ");
         nh.param<std::string>("session/pose_path_", pose_path, " ");
+        
+
         nh.param<int>("session/init_", init, 5);
         nh.param<int>("session/start_", start, 5);
         nh.param<int>("session/end_", end, 50);
@@ -265,6 +272,7 @@ public:
         nh.param<std::string>("ssc/seg_path_", seg_path, " ");
         nh.param<std::string>("ssc/pcd_path_", pcd_path, " ");
         nh.param<std::string>("ssc/map_path_", map_path, " ");
+        nh.param<std::string>("ssc/evaluate_path_", evaluate_path, " ");
 
         nh.param<float>("ssc/sensor_height_", sensor_height, 2.0);
         nh.param<float>("ssc/min_dis_", min_dis, 0.0);
@@ -408,7 +416,7 @@ public:
     }
 
     template<typename CloudT>
-    void getCloudByVec(const CloudT& cloud_, const std::vector<int>& vec_, const CloudT& cloud_out_){
+    void getCloudByVec(const CloudT& cloud_, const std::vector<int>& vec_, CloudT& cloud_out_){
         for(auto& it : vec_){
             cloud_out_->points.push_back(cloud_->points[it]);
         }

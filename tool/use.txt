@@ -1,0 +1,1 @@
+python analysis.py --gt /home/fyx/ufo_hiahia/src/out/evaluate/666_original.pcd --est /home/fyx/ufo_hiahia/src/out/evaluate/666_static.pcd

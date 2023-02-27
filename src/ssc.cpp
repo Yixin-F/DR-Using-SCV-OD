@@ -44,6 +44,8 @@ SSC::SSC(){
     fsmkdir(pcd_save);
     map_save = out_path + map_path;
     fsmkdir(map_save);
+    evaluate_save = out_path + evaluate_path;
+    fsmkdir(evaluate_save);
 
     std::cout << "----  SSC INITIALIZATION  ----" << "\n"
                        << "range_res: " << range_res << " sector_res: " << sector_res << " azimuth_res: " << azimuth_res << "\n"
@@ -56,6 +58,7 @@ SSC::SSC(){
                        << "map_init: " << init << "\n"
                        << "calib_save: " << calib_save << "\n"
                        << "seg_save: " << seg_save << "\n"
+                       << "evaluate_save: " << evaluate_save << "\n"
                        << std::endl;         
 }
 
@@ -65,6 +68,9 @@ void SSC::allocateMemory(){
     cloud_original.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
     cloud_dynamic.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
     cloud_static.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
+    cloud_eva_static.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    cloud_eva_dynamic.reset(new pcl::PointCloud<pcl::PointXYZI>());
+    cloud_eva_ori.reset(new pcl::PointCloud<pcl::PointXYZI>());
 }
 
 void SSC::reset(){
@@ -149,9 +155,18 @@ void SSC::makeApriVec(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_){
         float dis = pointDistance2d(pt);
         float angle = getPolarAngle(pt);
         float azimuth = getAzimuth(pt);
-        if(dis < min_dis || dis > max_dis) continue;
-        if(angle < min_angle || angle > max_angle) continue;
-        if(azimuth < min_azimuth || azimuth > max_azimuth) continue;
+        if(dis < min_dis || dis > max_dis){
+            cloud_eva_static->points.emplace_back(pt);
+            continue;
+        }
+        if(angle < min_angle || angle > max_angle){
+            cloud_eva_static->points.emplace_back(pt);
+            continue;
+        }
+        if(azimuth < min_azimuth || azimuth > max_azimuth){
+            cloud_eva_static->points.emplace_back(pt);
+            continue;
+        }
 
         cloud_use->points.push_back(pt);  
         frame_ssc.cloud_use->points.push_back(pt);  // get cloud_use
@@ -211,6 +226,7 @@ void SSC::process(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloudIn_){
     // extract ground
     pcl::PointCloud<pcl::PointXYZI>::Ptr ng_cloud(new pcl::PointCloud<pcl::PointXYZI>());
     ng_cloud = extractGroudByPatchWork(cloudIn_);
+
 
     // // calibrate intensity by curvature
     // intensityCalibrationByCurvature(ng_cloud);
@@ -272,8 +288,8 @@ void SSC::getVoxelCloudFromHashCloud(std::unordered_map<int, Voxel>& hashCloud_)
     for(auto& vox : hashCloud_){
         frame_ssc.vox_cloud->points.push_back(vox.second.center);
     }
-    std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
-    saveCloud(frame_ssc.vox_cloud, save_path, id, "_vox.pcd");
+    // std::string save_path = "/home/fyx/ufo_hiahia/src/test/";
+    // saveCloud(frame_ssc.vox_cloud, save_path, id, "_vox.pcd");
 }
 
 void SSC::clusterAndCreateFrame(const std::vector<PointAPRI>& apri_vec_, std::unordered_map<int, Voxel>& hash_cloud_){
@@ -424,6 +440,7 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         // if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2)){  // parkinglot
         if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2) || diff_z < 0.1){ 
             erase_id.emplace_back(c.first);
+            frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
         }
         else{
             continue;
@@ -437,7 +454,7 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
     }
 }
 
-void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, const std::string& path_, int mode){
+void SSC::saveSegCloud(Frame& frame_ssc_, const pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud_, const std::string& path_, int mode){
     cv::RNG rng(12345);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
     rgb_ptr->height = 1;
@@ -445,10 +462,11 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_ptr_d(new pcl::PointCloud<pcl::PointXYZRGB>());
     rgb_ptr_d->height = 1;
     int count_d = 0;
-    for(auto& c : frame_ssc.cluster_set){
+    for(auto& c : frame_ssc_.cluster_set){
         int r, g, b;
         if(c.second.state == 1){  
             if(mode == 3){  // skip dynamic object
+                frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
                 for(size_t i = 0; i < c.second.occupy_pts.size(); i++){
                     pcl::PointXYZRGB pt_rgb;
                     pcl::PointXYZI pt = cloud_->points[c.second.occupy_pts[i]];
@@ -498,6 +516,10 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
             }
         }
 
+        if(mode ==3){  // TODO: evaluate
+            frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);
+        }
+
         for(size_t i = 0; i < c.second.occupy_pts.size(); i++){
             pcl::PointXYZRGB pt_rgb;
             pcl::PointXYZI pt = cloud_->points[c.second.occupy_pts[i]];
@@ -516,7 +538,7 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
     // sample.setInputCloud(rgb_ptr);
     // sample.setLeafSize(0.05, 0.05, 0.05);
     // sample.filter(*rgb_ptr);
-    saveCloud(rgb_ptr, path_, frame_ssc.id, "_seg.pcd");
+    saveCloud(rgb_ptr, path_, frame_ssc_.id, "_seg.pcd");
 
     if(mode == 3){
         rgb_ptr_d->width = count_d;
@@ -526,7 +548,7 @@ void SSC::saveSegCloud(Frame& frame_ssc, const pcl::PointCloud<pcl::PointXYZI>::
         // sample_d.filter(*rgb_ptr_d);
         // *cloud_dynamic += *rgb_ptr_d;
         // *cloud_static += *rgb_ptr;
-        saveCloud(rgb_ptr_d, "/home/fyx/ufo_hiahia/src/test/", frame_ssc.id, "_dynamic.pcd");
+        // saveCloud(rgb_ptr_d, "/home/fyx/ufo_hiahia/src/test/", frame_ssc_.id, "_dynamic.pcd");   // TODO: TP
     }
     
 }
@@ -675,8 +697,8 @@ Feature SSC::getDescriptorByEigenValue(const Cluster& cluster_){
     // std::cout << "eigen_entropy: " << eigen_entropy << std::endl;
 
     // double change_of_curvature = std::fabs(e3 / sum_of_eigenvalues / kChangeOfCurvatureMax);
-    double change_of_curvature = 1.0;
-    eigenvalue_feature.feature_values.emplace_back(FeatureValue("change_of_curvature", change_of_curvature));
+    // double change_of_curvature = 1.0;
+    // eigenvalue_feature.feature_values.emplace_back(FeatureValue("change_of_curvature", change_of_curvature));
     // std::cout << "change_of_curvature: " << change_of_curvature << std::endl;
 
     std::pair<pcl::PointXYZI, pcl::PointXYZI> bounding_box = cluster_.bounding_box;
@@ -690,6 +712,10 @@ Feature SSC::getDescriptorByEigenValue(const Cluster& cluster_){
     float max_angle = getPolarAngle(point_max);
     float min_angle = getPolarAngle(point_min);
     float angle_diff = std::fabs(max_angle - min_angle);
+
+    double change_of_curvature = 1.0;
+    eigenvalue_feature.feature_values.emplace_back(FeatureValue("change_of_curvature", point_max.z));
+
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", square));
     // if(diff_z > diff_x || diff_z > diff_y){
     //     eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 1));
@@ -697,6 +723,8 @@ Feature SSC::getDescriptorByEigenValue(const Cluster& cluster_){
     // else{
     //     eigenvalue_feature.feature_values.emplace_back(FeatureValue("point_up", 0));
     // }
+
+    
 
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("max_z", angle_diff));
     eigenvalue_feature.feature_values.emplace_back(FeatureValue("min_z", point_min.z));
@@ -775,7 +803,7 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
         }
     }
 
-    if(plane_pts.size() >= cluster_cloud_->points.size() * 0.3){
+    if(plane_pts.size() >= cluster_cloud_->points.size() * 0.2){
     // if(plane_pts.size() >= 300){
         return true;
     }
@@ -788,9 +816,9 @@ void SSC::recognize(Frame& frame_ssc_){
     TicToc recognize_t("recognize");
     const double linearity_th = 0.02;
     const double planarity_th = 0.1;
-    const double max_z =  1.5;  // 
-    const double min_z =  - 0.5;  // must use min z !!
-    const double height =  3.0;  //  the size of car is too various
+    const double max_z =  1.73;  // 
+    const double min_z =  - 0.8;  // must use min z !!
+    const double height =  2.5;  //  the size of car is too various
     const double angle = 120.0;
     const double square =  20.0;  // 
     const double diff_x = 8;
@@ -812,7 +840,7 @@ void SSC::recognize(Frame& frame_ssc_){
             }
         }
         else{
-            if(f_11(0, 9) < min_z && f_11(0, 7) < square){
+            if(f_11(0, 9) < min_z && f_11(0, 7) < square && f_11(0, 6) < max_z){
                 f_11(0, 10) = (double)car;
                 c.second.type = car;
                 c.second.feature_matrix = f_11;
@@ -989,6 +1017,7 @@ void SSC::getCloud(){
         for(size_t i = start; i < end; i = i + skip){
             pcl::PointCloud<pcl::PointXYZI>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZI>());  // use in segDF
             pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());  // save
+            pcl::PointCloud<pcl::PointXYZI>::Ptr ori_cloud(new pcl::PointCloud<pcl::PointXYZI>());  // TODO: evaluate
 
             std::ifstream in_label(label_name[i], std::ios::binary);
             if(!in_label.is_open()){
@@ -1018,6 +1047,12 @@ void SSC::getCloud(){
                 xyzi.z = values_cloud[k * 4 + 2];
                 xyzi.intensity = values_cloud[k * 4 + 3] * max_intensity;
 
+                pcl::PointXYZI xyz_eva;
+                xyz_eva.x = values_cloud[k * 4];
+                xyz_eva.y = values_cloud[k * 4 + 1];
+                xyz_eva.z = values_cloud[k * 4 + 2];
+                xyz_eva.intensity = values_label[k];
+
                 pcl::PointXYZRGB rgb;
                 rgb.x = values_cloud[k * 4];
                 rgb.y = values_cloud[k * 4 + 1];
@@ -1033,10 +1068,12 @@ void SSC::getCloud(){
                     rgb.g = 192.f;
                     rgb.b = 176.f;
                 }
-                raw_cloud->points.emplace_back(xyzi);
+                
                 float dis = pointDistance2d(rgb);
                 if(dis >= min_dis || dis <= max_dis){   // save distance restricted to evaluate
+                    ori_cloud->points.emplace_back(xyz_eva);  // TODO: evaluate
                     rgb_cloud->points.emplace_back(rgb);
+                    raw_cloud->points.emplace_back(xyzi);
                 }
                 
             }
@@ -1050,10 +1087,21 @@ void SSC::getCloud(){
 
             pcl::VoxelGrid<pcl::PointXYZRGB> sample2;  // downsampling
             sample2.setInputCloud(rgb_cloud);
-            sample2.setLeafSize(1.0, 1.0, 1.0);
+            sample2.setLeafSize(0.08, 0.08, 0.08);
             sample2.filter(*rgb_cloud);
 
+            pcl::VoxelGrid<pcl::PointXYZI> sample3;  // TODO: evaluate
+            sample3.setInputCloud(ori_cloud);
+            sample3.setLeafSize(0.08, 0.08, 0.08);
+            sample3.filter(*ori_cloud);
+
             cloud_vec.emplace_back(raw_cloud);
+
+            std::cout << "raw_cloud: " << raw_cloud->points.size() << " rgb_cloud: " << rgb_cloud->points.size() << " ori_cloud: " << ori_cloud->points.size() << std::endl;
+
+            
+            pcl::transformPointCloud(*ori_cloud, *ori_cloud, trans_vec[it]);  // TODO: evaluate
+            eva_ori.emplace_back(ori_cloud);
 
             pcl::transformPointCloud(*rgb_cloud, *rgb_cloud, trans_vec[it]);
             // *cloud_original += *rgb_cloud;
@@ -1384,17 +1432,15 @@ void SSC::segDF(){
         Eigen::Affine3f trans_i = pcl::getTransformation(pose_vec[i].x, pose_vec[i].y, pose_vec[i].z, pose_vec[i].roll, pose_vec[i].pitch, pose_vec[i].yaw);
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
         transformCloud(frame_set[i].cloud_use, trans_i, cloud);
-        saveSegCloud(frame_set[i], cloud, map_save, 3);
-
-        pcl::VoxelGrid<pcl::PointXYZI> sample2;  // downsampling
-        sample2.setInputCloud(g_cloud_vec[i]);
-        // sample2.setLeafSize(1.0, 1.0, 1.0);
-        sample2.setLeafSize(0.08, 0.08, 0.08);
-        sample2.filter(*g_cloud_vec[i]);
 
         pcl::PointCloud<pcl::PointXYZI>::Ptr g_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        // pcl::VoxelGrid<pcl::PointXYZI> sample2;  // downsampling
+        // sample2.setInputCloud(g_cloud_vec[i]);
+        // sample2.setLeafSize(0.5, 0.5, 0.5);
+        // // sample2.setLeafSize(0.08, 0.08, 0.08);
+        // sample2.filter(*g_cloud_vec[i]);
         transformCloud(g_cloud_vec[i], trans_i, g_cloud);
-        // * g_cloud += * g_cloud_vec[i];
+
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb(new pcl::PointCloud<pcl::PointXYZRGB>());
         for(size_t k = 0; k < g_cloud->points.size(); k++){
             pcl::PointXYZRGB pt;
@@ -1409,8 +1455,59 @@ void SSC::segDF(){
             // pt.b = 127.f;
             rgb->points.push_back(pt);
         }
+
         saveCloud(rgb, map_save, frame_set[i].id, "_g.pcd");
+
+        saveSegCloud(frame_set[i], cloud, map_save, 3);   // TODO: must be excuted before evaluste
+
+        // TODO: evaluate
+        *cloud_eva_ori += *eva_ori[i];
+
+        for(auto& sta : frame_set[i].static_pt){
+            pcl::PointCloud<pcl::PointXYZI>::Ptr static_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+            getCloudByVec(cloud, sta, static_cloud);
+            *cloud_eva_static += *static_cloud;
+        }
+        *cloud_eva_static += *g_cloud;
+
+        for(auto& dy : frame_set[i].dynamic_pt){
+            pcl::PointCloud<pcl::PointXYZI>::Ptr dynamic_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+            getCloudByVec(cloud, dy, dynamic_cloud);
+            *cloud_eva_dynamic += *dynamic_cloud;
+        }
+        // TODO: evaluate
+
     }   
+
+    // TODO: evaluate
+
+    std::cout << "wait..." << std::endl;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr evaluate_static(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::KdTreeFLANN<pcl::PointXYZI> kd_tree;
+    kd_tree.setInputCloud(cloud_eva_ori);
+    std::vector<int> static_id;
+    for(size_t t = 0; t < cloud_eva_static->points.size(); t++){
+        pcl::PointXYZI pt = cloud_eva_static->points[t];
+        std::vector<int> id;
+        std::vector<float> dis;
+        kd_tree.nearestKSearch(pt, 1, id, dis);
+        if(0){
+        // if(findNameInVec((cloud_eva_ori->points[id[0]].intensity &  0xFFFF), dynamic_label)){
+            continue;
+        }
+        else{
+            addVec(static_id, id);
+        }
+    }
+    sampleVec(static_id);
+    getCloudByVec(cloud_eva_ori, static_id, evaluate_static);
+
+    saveCloud(cloud_eva_ori, evaluate_save, 666, "_original.pcd");
+    // saveCloud(cloud_eva_static, evaluate_save, 666, "_static.pcd");
+    saveCloud(evaluate_static, evaluate_save, 666, "_static.pcd");
+    saveCloud(cloud_eva_dynamic, evaluate_save, 666, "_dynamic.pcd");
+    std::cout << "done..." << std::endl;
+
     // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/original.pcd", *cloud_original);
     // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/static.pcd", *cloud_static);
     // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/dynamic.pcd", *cloud_dynamic);
