@@ -1,20 +1,20 @@
-seq.00 4320~4535              PR               RR                F1              time(ms)
+seq.00 4320~4535                                                                                   PR               RR                F1              time(ms)
                                                 -RI3-TC                                                          98.81          94.53         0.9662         213.67
                 ours                       -RI3                                                                 96.88           90.97         0.9383         178.59                               (skip: 5, refine_height: -0.2, max_z: 0.8, min_z: -1.2, car_height: 2.0, car_angle: 120, car_square: 30)  urban
                                                 -TC                                                                  96.86           89.10          0.9282          192.44 
                 
-                erasor                        
+                erasor                                                                                              89.07           96.74           0.9274      72.89       
 
                                             -RM3 [2.5, 2.0, 1.5]                                         94.64           83.98           0.8899        611.04
                 removert
                                             -RM3-RV2 [2.5, 2.0, 1.5] & [1.0, 0.8]          99.71         76.58           0.8663        804.53
 
 seq.01 120 ~ 270 (to show)
-                                                -RI3-TC                                                             94.38          98.65           0.9648       179.66 
+                                                -RI3-TC                                                             94.38          94.65           0.9453       179.66 
                 ours                        -RI3                                                                   91.87           93.42           0.9263       153.50                           (skip: 5, refine_height: 1.5, max_z: 2.0, min_z: -1.0, car_height: 2.0, car_angle: 120, car_square: 30)  252, 254  highway
                                                  -TC                                                                     89.82           86.20            0.8797        169.28
 
-               erasor                        
+               erasor                                                                                                94.46          92.41               0.9343        88.23       
 
                                             -RM3 [2.5, 2.0, 1.5]                                         98.70           53.23            0.6916          654.01  
                 removert
@@ -25,7 +25,7 @@ seq.02 820 ~ 980 (to show)
                 ours                       -RI3                                                                     96.13           92.98            0.9453      196.29                        (skip: 5, refine_height: 0.0, max_z: 2.5, min_z: -0.5, car_height: 2.0, car_angle: 120, car_square: 30)   252   urban
                                                 -TC                                                                       96.09           90.48           0.9320       181.53
 
-               erasor                        
+               erasor                                                                                                   75.14      99.58               0.8566          90.71
 
                                             -RM3 [2.5, 2.0, 1.5]                                        92.32         88.79          0.9052             548.76
                 removert
@@ -36,18 +36,18 @@ seq.05 2350 ~ 2670
                 ours                      -RI3                                                                      96.51          91.42           0.9393          232.09                                     (skip: 5, refine_height: 1.0, max_z: 4.0, min_z: 1.0, car_height: 2.0, car_angle: 150, car_square: 50)   252  urban
                                                -TC                                                                       96.45            90.09          0.9696           214.42            
 
-               erasor                        
+               erasor                                                                                                   88.62          98.09          0.9311        84.23
 
                                             -RM3 [2.5, 2.0, 1.5]                                         99.52       72.52           0.8390              833.13
                 removert
                                             -RM3-RV2 [2.5, 2.0, 1.5] & [1.0, 0.8]          99.67       66.90           0.8006               1087.33 
                                             
 seq.07 650 ~ 840         
-                                              -RI3-TC                                                               94.74         99.66             0.9714                 150.24  
+                                              -RI3-TC                                                               94.74         97.66             0.9618                 150.24  
                 ours                      -RI3                                                                      94.41         92.67             0.9357             121.27                         (skip: 5, refine_height: 2.0, max_z: 5.0, min_z: 0.0, car_height: 2.0, car_angle: 150, car_square: 50)  252, 254, 258 
                                               -TC                                                                       94.68        87.56             0.9082                  118.68
 
-               erasor                        
+               erasor                                                                                               93.80           97.29           0.9551                      
 
                                             -RM3 [2.5, 2.0, 1.5]                                        99.68           77.48          0.8719           413.16
                 removert
