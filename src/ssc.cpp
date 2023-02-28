@@ -440,11 +440,12 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         // if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2)){  // parkinglot
         if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || diff_z < 0.2){ 
             erase_id.emplace_back(c.first);
-            if(point_min.z < 0.f){
-                frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
-            }{
-                frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
-            }
+            frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
+            // if(point_min.z < refine_height ||  (c.second.occupy_pts.size() < toBeClass) || diff_z < 0.2){
+            //     frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
+            // }{
+            //     frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
+            // }
             
         }
         else{
@@ -796,8 +797,8 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     reg.setNumberOfNeighbours (toBeClass * 2);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (8.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
-    reg.setCurvatureThreshold (0.6);
+    reg.setSmoothnessThreshold (4.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setCurvatureThreshold (0.4);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -1498,7 +1499,7 @@ void SSC::segDF(){
         kd_tree.nearestKSearch(pt, 1, id, dis);
         uint32_t label = static_cast<uint32_t>(cloud_eva_ori->points[id[0]].intensity);
         // if(findNameInVec((label & 0xFFFF), dynamic_label)){
-        if((label & 0xFFFF) == 252 || (label & 0xFFFF) > 259){
+        if((label & 0xFFFF) == 252 || (label & 0xFFFF) == 254){
             // std::cout << (label & 0xFFFF ) << " ";
             continue;
         }

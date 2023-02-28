@@ -1,21 +1,54 @@
 seq.00 4320~4535  (view1: (0, 0, 0) view2: (-57, -2, -4))             PR               RR                F1              time(ms)
                                                 0.4                                                                  98.81          94.53         0.9662
-                ours                                                                                                                                                                213.67                      (skip: 5, refine_height: -0.2, max_z: 0.8, min_z: -1.2, car_height: 2.0, car_angle: 120, car_square: 30)
+                ours                                                                                                                                                                213.67                      (skip: 5, refine_height: -0.2, max_z: 0.8, min_z: -1.2, car_height: 2.0, car_angle: 120, car_square: 30)  urban
                                                 0.8                                                                  98.45          95.28         0.9686
                 
                 erasor                        
+
+                                            RM3-RV1
+                removert
+                                            =====
+
+seq.01 120 ~ 270 (view1: (0, 0, -50) view2: ())
+                                                0.4                                                                 94.38          98.65           0.9648
+                ours                                                                                                                                                                  179.66                                  (skip: 5, refine_height: 1.5, max_z: 1.5, min_z: -1.0, car_height: 2.0, car_angle: 140, car_square: 30)  252, 254  highway
+                                                0.8                      
+
+               erasor                        
 
                                             =====
                 removert
                                             =====
 
-seq.01 120 ~ 270 (view1: (0, 0, -50) view2: ())
-                                                0.4
-                ours                                                                                                                                                                                                    (skip: 5, refine_height: 1.5, max_z: 1.5, min_z: -1.0, car_height: 2.0, car_angle: 140, car_square: 30)
-                                                0.8                      
-
-
 seq.02 820 ~ 980
                                                0.4                                                                  98.52          96.12           0.9704
-                ours                                                                                                                                                                                                    (skip: 5, refine_height: 0.0, max_z: 2.5, min_z: -0.5, car_height: 2.0, car_angle: 120, car_square: 30)
+                ours                                                                                                                                                                  236.41                                  (skip: 5, refine_height: 0.0, max_z: 2.5, min_z: -0.5, car_height: 2.0, car_angle: 120, car_square: 30)   252   urban
                                                 0.8                      
+
+               erasor                        
+
+                                            =====
+                removert
+                                            =====
+
+seq.05 2350 ~ 2670
+                                              0.4                                                                  98.97          96.67           0.9766
+                ours                                                                                                                                                                  296.45                                  (skip: 5, refine_height: 1.0, max_z: 4.0, min_z: 1.0, car_height: 2.0, car_angle: 150, car_square: 50)   252  urban
+                                              0.8          
+
+               erasor                        
+
+                                            =====
+                removert
+                                            =====
+                                            
+seq.07 650 ~ 840         
+                                              0.4                                                                  94.41          99.66           0.96.97
+                ours                                                                                                                                                                  150.24                      (skip: 5, refine_height: 2.0, max_z: 5.0, min_z: 0.0, car_height: 2.0, car_angle: 150, car_square: 50)  252, 254, 258 
+                                              0.8          
+
+               erasor                        
+
+                                            =====
+                removert
+                                            =====
