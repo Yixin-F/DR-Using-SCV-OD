@@ -439,13 +439,15 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
         float diff_z = point_max.z - point_min.z;
         // if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || (point_max.z < - sensor_height / 2)){  // parkinglot
         if(point_min.z > 0.f ||  (c.second.occupy_pts.size() < toBeClass) || diff_z < 0.2){ 
+
             erase_id.emplace_back(c.first);
-            frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
-            // if(point_min.z < refine_height ||  (c.second.occupy_pts.size() < toBeClass) || diff_z < 0.2){
-            //     frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
-            // }{
-            //     frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
-            // }
+            // frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
+            if(point_min.z < refine_height ||  (c.second.occupy_pts.size() < toBeClass) || diff_z < 0.2){
+                frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
+            }{
+                frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
+            }
+
             
         }
         else{
@@ -1330,25 +1332,27 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
                     }
                     else{
                         c.second.state = 0;
+
                         c.second.type = frame_next_.cluster_set[it->first].type;
-                        // Cluster cluster_new;
-                        // cluster_new.track_id = c.second.track_id;
-                        // cluster_new.name = frame_next_.max_name ++;
-                        // // cluster_new.type = car;
-                        // cluster_new.type = frame_next_.cluster_set[it->first].type;
-                        // cluster_new.color[0] = c.second.color[0];
-                        // cluster_new.color[1] = c.second.color[1];
-                        // cluster_new.color[2] = c.second.color[2];
-                        // cluster_new.occupy_voxels = it->second;
-                        // reduceVec(frame_next_.cluster_set[it->first].occupy_voxels, cluster_new.occupy_voxels);
-                        // for(auto& v : it->second){
-                        //     frame_next_.hash_cloud[v].label = cluster_new.name;
-                        //     addVec(cluster_new.occupy_pts, frame_next_.hash_cloud[v].ptIdx);
-                        // }
-                        // getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
+                        Cluster cluster_new;
+                        cluster_new.track_id = c.second.track_id;
+                        cluster_new.name = frame_next_.max_name ++;
+                        // cluster_new.type = car;
+                        cluster_new.type = frame_next_.cluster_set[it->first].type;
+                        cluster_new.color[0] = c.second.color[0];
+                        cluster_new.color[1] = c.second.color[1];
+                        cluster_new.color[2] = c.second.color[2];
+                        cluster_new.occupy_voxels = it->second;
+                        reduceVec(frame_next_.cluster_set[it->first].occupy_voxels, cluster_new.occupy_voxels);
+                        for(auto& v : it->second){
+                            frame_next_.hash_cloud[v].label = cluster_new.name;
+                            addVec(cluster_new.occupy_pts, frame_next_.hash_cloud[v].ptIdx);
+                        }
+                        getCloudByVec(frame_next_.cloud_use, cluster_new.occupy_pts, cluster_new.cloud);
                         // *cluster_new.cloud += *cluster;
-                        // reduceVec(frame_next_.cluster_set[it->first].occupy_pts, cluster_new.occupy_pts);
-                        // frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
+                        reduceVec(frame_next_.cluster_set[it->first].occupy_pts, cluster_new.occupy_pts);
+                        frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
+
                     }    
                 }
 
@@ -1372,6 +1376,7 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
 
             else if(remap_name.size() > 1){
                 c.second.state = 0;
+
                 Cluster cluster_new;
                 cluster_new.track_id = c.second.track_id;
                 cluster_new.name = frame_next_.max_name ++;
@@ -1393,6 +1398,7 @@ void SSC::tracking(Frame& frame_pre_, Frame& frame_next_, Pose pose_pre_, Pose p
                     frame_next_.hash_cloud[v].label = cluster_new.name;
                 }
                 frame_next_.cluster_set.insert(std::make_pair(cluster_new.name, cluster_new));
+
             }
     }
 
@@ -1499,7 +1505,7 @@ void SSC::segDF(){
         kd_tree.nearestKSearch(pt, 1, id, dis);
         uint32_t label = static_cast<uint32_t>(cloud_eva_ori->points[id[0]].intensity);
         // if(findNameInVec((label & 0xFFFF), dynamic_label)){
-        if((label & 0xFFFF) == 252 || (label & 0xFFFF) == 254){
+        if(0){
             // std::cout << (label & 0xFFFF ) << " ";
             continue;
         }

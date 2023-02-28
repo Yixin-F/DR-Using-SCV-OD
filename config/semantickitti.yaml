@@ -7,12 +7,12 @@ common:
   skip_: 5
 
 session:
-  data_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/07/velodyne/"
-  label_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/07/labels/"
-  pose_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/07/poses.txt"
+  data_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/00/velodyne/"
+  label_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/00/labels/"
+  pose_path_: "/media/fyx/Yixin F/Semantic_KITTI/dataset/sequences/00/poses.txt"
   init_: 4   # the num of frame to initialize
-  start_: 650 # the start index in dataset, please check it
-  end_: 840
+  start_: 4320 # the start index in dataset, please check it
+  end_: 4535
 
 ssc:
   calib_path_: "calib/"
@@ -22,12 +22,12 @@ ssc:
   evaluate_path_: "evaluate/"
 
   sensor_height_: 1.73   
-  refine_height_: 3.0
-  max_z_: 5.0
-  min_z_: 3.0
-  car_angle_: 150.0
+  refine_height_: -0.2
+  max_z_: 0.8
+  min_z_: -1.2
+  car_angle_: 120.0
   car_height_: 2.0
-  car_square_: 50.0
+  car_square_: 30.0
 
   min_dis_:  1.5  # /m   
   max_dis_: 30.0  # /m  01 -> 50 on the highway
@@ -47,12 +47,12 @@ ssc:
   correct_radius_: 0.3
   search_num_: 10
 
-  iteration_: 2
+  iteration_: 3
   toBeClass_: 10  # the min numbers of points to be one class
   search_c_: 2  # > 1, 2
   intensity_diff_: 2.0
   intensity_cov_: 1.0
-  occupancy_: 0.8
+  occupancy_: 0.4
 
   building_: 0  # cluster map
   tree_: 1

@@ -1,18 +1,18 @@
-seq.00 4320~4535  (view1: (0, 0, 0) view2: (-57, -2, -4))             PR               RR                F1              time(ms)
+seq.00 4320~4535              PR               RR                F1              time(ms)
                                                 -RI3-TC                                                          98.81          94.53         0.9662         213.67
-                ours                       -RI3                                                                                                                                                              (skip: 5, refine_height: -0.2, max_z: 0.8, min_z: -1.2, car_height: 2.0, car_angle: 120, car_square: 30)  urban
-                                                -TC                                                                  
+                ours                       -RI3                                                                 96.88           90.97         0.9383         178.59                               (skip: 5, refine_height: -0.2, max_z: 0.8, min_z: -1.2, car_height: 2.0, car_angle: 120, car_square: 30)  urban
+                                                -TC                                                                  96.86           89.10          0.9282          192.44 
                 
                 erasor                        
 
-                                            -RM3 [2.5, 2.0, 1.5]                                         99.64           83.98           0.9114        611.04
+                                            -RM3 [2.5, 2.0, 1.5]                                         94.64           83.98           0.8899        611.04
                 removert
                                             -RM3-RV2 [2.5, 2.0, 1.5] & [1.0, 0.8]          99.71         76.58           0.8663        804.53
 
-seq.01 120 ~ 270 (view1: (0, 0, -50) view2: ())
+seq.01 120 ~ 270 (to show)
                                                 -RI3-TC                                                             94.38          98.65           0.9648       179.66 
-                ours                        -RI3                                                                                                                                                                           (skip: 5, refine_height: 1.5, max_z: 1.5, min_z: -1.0, car_height: 2.0, car_angle: 140, car_square: 30)  252, 254  highway
-                                                 -TC                       
+                ours                        -RI3                                                                   91.87           93.42           0.9263       153.50                           (skip: 5, refine_height: 1.5, max_z: 2.0, min_z: -1.0, car_height: 2.0, car_angle: 120, car_square: 30)  252, 254  highway
+                                                 -TC                                                                     89.82           86.20            0.8797        169.28
 
                erasor                        
 
@@ -20,10 +20,10 @@ seq.01 120 ~ 270 (view1: (0, 0, -50) view2: ())
                 removert
                                             -RM3-RV2 [2.5, 2.0, 1.5] & [1.0, 0.8]          99.03          46.99             0.6374     824.41
 
-seq.02 820 ~ 980
+seq.02 820 ~ 980 (to show)
                                                -RI3-TC                                                               98.52          96.12           0.9704       236.41    
-                ours                       -RI3                                                                                                                                                                          (skip: 5, refine_height: 0.0, max_z: 2.5, min_z: -0.5, car_height: 2.0, car_angle: 120, car_square: 30)   252   urban
-                                                -TC                      
+                ours                       -RI3                                                                     96.13           92.98            0.9453      196.29                        (skip: 5, refine_height: 0.0, max_z: 2.5, min_z: -0.5, car_height: 2.0, car_angle: 120, car_square: 30)   252   urban
+                                                -TC                                                                       96.09           90.48           0.9320       181.53
 
                erasor                        
 
@@ -32,9 +32,9 @@ seq.02 820 ~ 980
                                             -RM3-RV2 [2.5, 2.0, 1.5] & [1.0, 0.8]         95.45          84.71        0.8976              686.35
 
 seq.05 2350 ~ 2670
-                                              -RI3-TC                                                                98.97          96.67           0.9766                296.45
-                ours                      -RI3                                                                                                                                                                              (skip: 5, refine_height: 1.0, max_z: 4.0, min_z: 1.0, car_height: 2.0, car_angle: 150, car_square: 50)   252  urban
-                                               -TC          
+                                              -RI3-TC                                                                98.97          96.67           0.9766          296.45
+                ours                      -RI3                                                                      96.51          91.42           0.9393          232.09                                     (skip: 5, refine_height: 1.0, max_z: 4.0, min_z: 1.0, car_height: 2.0, car_angle: 150, car_square: 50)   252  urban
+                                               -TC                                                                       96.45            90.09          0.9696           214.42            
 
                erasor                        
 
@@ -43,12 +43,12 @@ seq.05 2350 ~ 2670
                                             -RM3-RV2 [2.5, 2.0, 1.5] & [1.0, 0.8]          99.67       66.90           0.8006               1087.33 
                                             
 seq.07 650 ~ 840         
-                                              -RI3-TC                                                                  94.41          99.66           0.96.97               150.24  
-                ours                      -RI3                                                                                                                                                                         (skip: 5, refine_height: 2.0, max_z: 5.0, min_z: 0.0, car_height: 2.0, car_angle: 150, car_square: 50)  252, 254, 258 
-                                              -TC          
+                                              -RI3-TC                                                               94.74         99.66             0.9714                 150.24  
+                ours                      -RI3                                                                      94.41         92.67             0.9357             121.27                         (skip: 5, refine_height: 2.0, max_z: 5.0, min_z: 0.0, car_height: 2.0, car_angle: 150, car_square: 50)  252, 254, 258 
+                                              -TC                                                                       94.68        87.56             0.9082                  118.68
 
                erasor                        
 
-                                            -RM3 [2.5, 2.0, 1.5]                                        99.68           77.48          0.8719
+                                            -RM3 [2.5, 2.0, 1.5]                                        99.68           77.48          0.8719           413.16
                 removert
-                                            -RM3-RV2 [2.5, 2.0, 1.5] & [1.0, 0.8]                                                                            508.50
+                                            -RM3-RV2 [2.5, 2.0, 1.5] & [1.0, 0.8]         99.76          75.93          0.8622           508.50
