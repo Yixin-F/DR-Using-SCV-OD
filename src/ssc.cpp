@@ -1411,120 +1411,120 @@ void SSC::segDF(){
     getCloud();      
     std::cout << "\n";
 
-    for(auto& cloud : cloud_vec){
-        ROS_INFO("frame %d is added into the segDF", id);
-        process(cloud);
-        segment();
-        saveSegCloud(frame_ssc, frame_ssc.cloud_use, seg_save, 1);
-        recognize(frame_ssc);
-        frame_set.emplace_back(frame_ssc);
-        reset();
-        id += skip;
-        std::cout << "\n";
-    }
-
-    // std::vector<Frame> frame_init;
-    // std::vector<Pose> pose_init;
-    // for(int i = 0; i < init; i++){
-    //     frame_init.emplace_back(frame_set[i]);
-    //     pose_init.emplace_back(pose_vec[i]);
+    // for(auto& cloud : cloud_vec){
+    //     ROS_INFO("frame %d is added into the segDF", id);
+    //     process(cloud);
+    //     segment();
+    //     saveSegCloud(frame_ssc, frame_ssc.cloud_use, seg_save, 1);
+    //     recognize(frame_ssc);
+    //     frame_set.emplace_back(frame_ssc);
+    //     reset();
+    //     id += skip;
+    //     std::cout << "\n";
     // }
 
-    // frame_based = intialization(frame_init, pose_init);
-    // saveSegCloud(frame_based, frame_based.cloud_use);
-    // std::cout << "\n";
+    // // std::vector<Frame> frame_init;
+    // // std::vector<Pose> pose_init;
+    // // for(int i = 0; i < init; i++){
+    // //     frame_init.emplace_back(frame_set[i]);
+    // //     pose_init.emplace_back(pose_vec[i]);
+    // // }
+
+    // // frame_based = intialization(frame_init, pose_init);
+    // // saveSegCloud(frame_based, frame_based.cloud_use);
+    // // std::cout << "\n";
 
 
-    // int start_df = frame_based.id - start;
-    for(int i = 0 ; i < frame_set.size() - 1; i ++ ){
-        tracking(frame_set[i], frame_set[i + 1], pose_vec[i], pose_vec[i + 1]);
-    }
+    // // int start_df = frame_based.id - start;
+    // for(int i = 0 ; i < frame_set.size() - 1; i ++ ){
+    //     tracking(frame_set[i], frame_set[i + 1], pose_vec[i], pose_vec[i + 1]);
+    // }
 
-    for(int i = 0; i < frame_set.size() - 1; i ++){
-        Eigen::Affine3f trans_i = pcl::getTransformation(pose_vec[i].x, pose_vec[i].y, pose_vec[i].z, pose_vec[i].roll, pose_vec[i].pitch, pose_vec[i].yaw);
-        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
-        transformCloud(frame_set[i].cloud_use, trans_i, cloud);
+    // for(int i = 0; i < frame_set.size() - 1; i ++){
+    //     Eigen::Affine3f trans_i = pcl::getTransformation(pose_vec[i].x, pose_vec[i].y, pose_vec[i].z, pose_vec[i].roll, pose_vec[i].pitch, pose_vec[i].yaw);
+    //     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    //     transformCloud(frame_set[i].cloud_use, trans_i, cloud);
 
-        pcl::PointCloud<pcl::PointXYZI>::Ptr g_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-        // pcl::VoxelGrid<pcl::PointXYZI> sample2;  // downsampling
-        // sample2.setInputCloud(g_cloud_vec[i]);
-        // sample2.setLeafSize(0.5, 0.5, 0.5);
-        // // sample2.setLeafSize(0.08, 0.08, 0.08);
-        // sample2.filter(*g_cloud_vec[i]);
-        transformCloud(g_cloud_vec[i], trans_i, g_cloud);
+    //     pcl::PointCloud<pcl::PointXYZI>::Ptr g_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    //     // pcl::VoxelGrid<pcl::PointXYZI> sample2;  // downsampling
+    //     // sample2.setInputCloud(g_cloud_vec[i]);
+    //     // sample2.setLeafSize(0.5, 0.5, 0.5);
+    //     // // sample2.setLeafSize(0.08, 0.08, 0.08);
+    //     // sample2.filter(*g_cloud_vec[i]);
+    //     transformCloud(g_cloud_vec[i], trans_i, g_cloud);
 
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb(new pcl::PointCloud<pcl::PointXYZRGB>());
-        for(size_t k = 0; k < g_cloud->points.size(); k++){
-            pcl::PointXYZRGB pt;
-            pt.x = g_cloud->points[k].x;
-            pt.y = g_cloud->points[k].y;
-            pt.z = g_cloud->points[k].z;
-            pt.r = 255.f;   // use for tracking
-            pt.g = 222.f;
-            pt.b = 173.f;
-            // pt.r = 0.f;  // use for evaluate
-            // pt.g = 255.f;
-            // pt.b = 127.f;
-            rgb->points.push_back(pt);
-        }
+    //     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb(new pcl::PointCloud<pcl::PointXYZRGB>());
+    //     for(size_t k = 0; k < g_cloud->points.size(); k++){
+    //         pcl::PointXYZRGB pt;
+    //         pt.x = g_cloud->points[k].x;
+    //         pt.y = g_cloud->points[k].y;
+    //         pt.z = g_cloud->points[k].z;
+    //         pt.r = 255.f;   // use for tracking
+    //         pt.g = 222.f;
+    //         pt.b = 173.f;
+    //         // pt.r = 0.f;  // use for evaluate
+    //         // pt.g = 255.f;
+    //         // pt.b = 127.f;
+    //         rgb->points.push_back(pt);
+    //     }
 
-        saveCloud(rgb, map_save, frame_set[i].id, "_g.pcd");
+    //     saveCloud(rgb, map_save, frame_set[i].id, "_g.pcd");
 
-        saveSegCloud(frame_set[i], cloud, map_save, 3);   // TODO: must be excuted before evaluste
+    //     saveSegCloud(frame_set[i], cloud, map_save, 3);   // TODO: must be excuted before evaluste
 
-        // TODO: evaluate
-        *cloud_eva_ori += *eva_ori[i];
+    //     // TODO: evaluate
+    //     *cloud_eva_ori += *eva_ori[i];
 
-        for(auto& sta : frame_set[i].static_pt){
-            pcl::PointCloud<pcl::PointXYZI>::Ptr static_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-            getCloudByVec(cloud, sta, static_cloud);
-            *cloud_eva_static += *static_cloud;
-        }
-        *cloud_eva_static += *g_cloud;
+    //     for(auto& sta : frame_set[i].static_pt){
+    //         pcl::PointCloud<pcl::PointXYZI>::Ptr static_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    //         getCloudByVec(cloud, sta, static_cloud);
+    //         *cloud_eva_static += *static_cloud;
+    //     }
+    //     *cloud_eva_static += *g_cloud;
 
-        for(auto& dy : frame_set[i].dynamic_pt){
-            pcl::PointCloud<pcl::PointXYZI>::Ptr dynamic_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-            getCloudByVec(cloud, dy, dynamic_cloud);
-            *cloud_eva_dynamic += *dynamic_cloud;
-        }
-        // TODO: evaluate
+    //     for(auto& dy : frame_set[i].dynamic_pt){
+    //         pcl::PointCloud<pcl::PointXYZI>::Ptr dynamic_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    //         getCloudByVec(cloud, dy, dynamic_cloud);
+    //         *cloud_eva_dynamic += *dynamic_cloud;
+    //     }
+    //     // TODO: evaluate
 
-    }   
+    // }   
 
-    // TODO: evaluate
+    // // TODO: evaluate
 
-    std::cout << "wait..." << std::endl;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr evaluate_static(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::KdTreeFLANN<pcl::PointXYZI> kd_tree;
-    kd_tree.setInputCloud(cloud_eva_ori);
-    std::vector<int> static_id;
-    for(size_t t = 0; t < cloud_eva_static->points.size(); t++){
-        pcl::PointXYZI pt = cloud_eva_static->points[t];
-        std::vector<int> id;
-        std::vector<float> dis;
-        kd_tree.nearestKSearch(pt, 1, id, dis);
-        uint32_t label = static_cast<uint32_t>(cloud_eva_ori->points[id[0]].intensity);
-        // if(findNameInVec((label & 0xFFFF), dynamic_label)){
-        if(0){
-            // std::cout << (label & 0xFFFF ) << " ";
-            continue;
-        }
-        else{
-            addVec(static_id, id);
-        }
-    }
-    sampleVec(static_id);
-    getCloudByVec(cloud_eva_ori, static_id, evaluate_static);
+    // std::cout << "wait..." << std::endl;
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr evaluate_static(new pcl::PointCloud<pcl::PointXYZI>);
+    // pcl::KdTreeFLANN<pcl::PointXYZI> kd_tree;
+    // kd_tree.setInputCloud(cloud_eva_ori);
+    // std::vector<int> static_id;
+    // for(size_t t = 0; t < cloud_eva_static->points.size(); t++){
+    //     pcl::PointXYZI pt = cloud_eva_static->points[t];
+    //     std::vector<int> id;
+    //     std::vector<float> dis;
+    //     kd_tree.nearestKSearch(pt, 1, id, dis);
+    //     uint32_t label = static_cast<uint32_t>(cloud_eva_ori->points[id[0]].intensity);
+    //     // if(findNameInVec((label & 0xFFFF), dynamic_label)){
+    //     if((label & 0xFFFF) == 252){
+    //         // std::cout << (label & 0xFFFF ) << " ";
+    //         continue;
+    //     }
+    //     else{
+    //         addVec(static_id, id);
+    //     }
+    // }
+    // sampleVec(static_id);
+    // getCloudByVec(cloud_eva_ori, static_id, evaluate_static);
 
-    saveCloud(cloud_eva_ori, evaluate_save, 666, "_original.pcd");
-    // saveCloud(cloud_eva_static, evaluate_save, 666, "_old_static.pcd");
-    saveCloud(evaluate_static, evaluate_save, 666, "_static.pcd");
-    saveCloud(cloud_eva_dynamic, evaluate_save, 666, "_dynamic.pcd");
-    std::cout << "done..." << std::endl;
+    // saveCloud(cloud_eva_ori, evaluate_save, 666, "_original.pcd");
+    // // saveCloud(cloud_eva_static, evaluate_save, 666, "_old_static.pcd");
+    // saveCloud(evaluate_static, evaluate_save, 666, "_static.pcd");
+    // saveCloud(cloud_eva_dynamic, evaluate_save, 666, "_dynamic.pcd");
+    // std::cout << "done..." << std::endl;
 
-    // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/original.pcd", *cloud_original);
-    // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/static.pcd", *cloud_static);
-    // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/dynamic.pcd", *cloud_dynamic);
+    // // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/original.pcd", *cloud_original);
+    // // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/static.pcd", *cloud_static);
+    // // pcl::io::savePCDFile("/home/fyx/ufo_hiahia/src/evaluate/dynamic.pcd", *cloud_dynamic);
 
 }
 

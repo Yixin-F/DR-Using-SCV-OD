@@ -1,4 +1,4 @@
-seq.00 4320~4535                                                                                   PR               RR                F1              time(ms)
+seq.00 4320~4535 (to show)                                                                                  PR               RR                F1              time(ms)
                                                 -RI3-TC                                                          98.81          94.53         0.9662         213.67
                 ours                       -RI3                                                                 96.88           90.97         0.9383         178.59                               (skip: 5, refine_height: -0.2, max_z: 0.8, min_z: -1.2, car_height: 2.0, car_angle: 120, car_square: 30)  urban
                                                 -TC                                                                  96.86           89.10          0.9282          192.44 
@@ -47,7 +47,7 @@ seq.07 650 ~ 840
                 ours                      -RI3                                                                      94.41         92.67             0.9357             121.27                         (skip: 5, refine_height: 2.0, max_z: 5.0, min_z: 0.0, car_height: 2.0, car_angle: 150, car_square: 50)  252, 254, 258 
                                               -TC                                                                       94.68        87.56             0.9082                  118.68
 
-               erasor                                                                                               93.80           97.29           0.9551                      
+               erasor                                                                                               93.80           97.29           0.9551                  65.96    
 
                                             -RM3 [2.5, 2.0, 1.5]                                        99.68           77.48          0.8719           413.16
                 removert
