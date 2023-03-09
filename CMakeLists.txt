@@ -120,4 +120,16 @@ target_link_libraries(${PROJECT_NAME}_remain
   stdc++fs
 )
 
+# plotObject
+add_executable( ${PROJECT_NAME}_object src/plotObject.cpp)
+add_dependencies(${PROJECT_NAME}_object ${catkin_EXPORTED_TARGETS})
+target_compile_options(${PROJECT_NAME}_object PRIVATE ${OpenMP_CXX_FLAGS})
+target_link_libraries(${PROJECT_NAME}_object
+  ${catkin_LIBRARIES} 
+  ${PCL_LIBRARIES} 
+  ${OpenCV_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
+  ${YAML_CPP_LIBRARIES}
+  stdc++fs
+)
 

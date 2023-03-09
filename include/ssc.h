@@ -36,6 +36,10 @@ public:
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_dynamic;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_static;
 
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr instance_map;
+
+    
+
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> eva_ori;
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_eva_ori;
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_eva_static;

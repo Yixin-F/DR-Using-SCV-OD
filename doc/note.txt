@@ -52,3 +52,17 @@ seq.07 650 ~ 840
                                             -RM3 [2.5, 2.0, 1.5]                                        99.68           77.48          0.8719           413.16
                 removert
                                             -RM3-RV2 [2.5, 2.0, 1.5] & [1.0, 0.8]         99.76          75.93          0.8622           508.50
+
+
+                              total num                                     ground                                                                      building                                                                          tree                                                                                                pd
+                                                                    pt num           perservation rate (%)                pt num           perservation rate (%)              pt num               perservation rate (%)                              pt num               perservation rate (%)    
+
+seq 00                  2325k                           678k                        98.51                                       472k                               60.37                                997k                        85.89                                                           178k                            94.08
+
+seq 01                  1833k                           513k                        97.26                                       195k                                64.58                               1093k                      88.45                                                            31k                             96.13     
+
+seq 02                                                      
+
+seq 05                  3598k                           1169k                   98.27                                           876k                            54.69                                   1326k                    75.96                                                           225k                            97.25                               
+
+seq 07

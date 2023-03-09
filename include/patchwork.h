@@ -120,12 +120,12 @@ private:
     int num_zones_ = 4;
     int num_rings_of_interest_ = 2.7;
 
-    double sensor_height_;  // 1.723
+    double sensor_height_;  // 1.732
     double th_seeds_ = 0.5;
-    double th_dist_ = 0.1;  // 0.125
+    double th_dist_ = 0.125;  
     double max_range_ = 80.0;
-    double min_range_ = 2.0;  
-    double uprightness_thr_ = 0.6;  // 0.707
+    double min_range_ = 2.7;  
+    double uprightness_thr_ = 0.707;  // 0.707
     double adaptive_seed_selection_margin_ = -1.1;
     double min_range_z2_; // 12.3625
     double min_range_z3_; // 22.025
