@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 name = ['00', '01', '02', '05', '07']
 
@@ -10,9 +11,15 @@ x = [0.2, 0.5, 0.8]
 color = ['red', 'blue', 'green', 'brown', 'gold']
 marker = ['s', 'v', 'd', 'o', 'x']
 
+x_ticks = np.arange(0.2, 0.8, 0.3)
+
 for i in range(len(name)):
-    plt.plot(x, rr[i], color = color[i], marker = marker[i], linewidth = 0.4, linestyle = "-.")
+    plt.plot(x, rr[i], color = color[i], marker = marker[i], linewidth = 0.8, linestyle = "-.")
 
-plt.legend(name, loc='lower left', bbox_to_anchor=(0.84, 0.0))
-
+plt.legend(name, loc = 'lower left', bbox_to_anchor = (0.84, 0.0)) # 0.84
+plt.xticks(x_ticks)
+plt.xlabel('object overlap ratio threshold')
+plt.ylabel('RR [%]')
+plt.title('Rejection Rate')
+plt.grid(True, linestyle = ":", color = 'black', alpha = 0.5)
 plt.show()

@@ -133,3 +133,16 @@ target_link_libraries(${PROJECT_NAME}_object
   stdc++fs
 )
 
+# makeScan
+add_executable( ${PROJECT_NAME}_scan src/makeScan.cpp)
+add_dependencies(${PROJECT_NAME}_scan ${catkin_EXPORTED_TARGETS})
+target_compile_options(${PROJECT_NAME}_scan PRIVATE ${OpenMP_CXX_FLAGS})
+target_link_libraries(${PROJECT_NAME}_scan
+  ${catkin_LIBRARIES} 
+  ${PCL_LIBRARIES} 
+  ${OpenCV_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
+  ${YAML_CPP_LIBRARIES}
+  stdc++fs
+)
+

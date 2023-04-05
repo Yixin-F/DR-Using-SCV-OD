@@ -806,8 +806,8 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     reg.setNumberOfNeighbours (toBeClass * 1);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (10.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
-    reg.setCurvatureThreshold (1.0);
+    reg.setSmoothnessThreshold (8.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setCurvatureThreshold (0.8);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -1516,6 +1516,7 @@ void SSC::segDF(){
         uint32_t label = static_cast<uint32_t>(cloud_eva_ori->points[id[0]].intensity);
         // if(findNameInVec((label & 0xFFFF), dynamic_label)){
         if((label & 0xFFFF) == 252){
+        // if(0){
             // std::cout << (label & 0xFFFF ) << " ";
             continue;
         }
