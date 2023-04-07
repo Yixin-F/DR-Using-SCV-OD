@@ -146,3 +146,28 @@ target_link_libraries(${PROJECT_NAME}_scan
   stdc++fs
 )
 
+# colorBin
+add_executable( ${PROJECT_NAME}_color src/colorBin.cpp)
+add_dependencies(${PROJECT_NAME}_color ${catkin_EXPORTED_TARGETS})
+target_compile_options(${PROJECT_NAME}_color PRIVATE ${OpenMP_CXX_FLAGS})
+target_link_libraries(${PROJECT_NAME}_color
+  ${catkin_LIBRARIES} 
+  ${PCL_LIBRARIES} 
+  ${OpenCV_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
+  ${YAML_CPP_LIBRARIES}
+  stdc++fs
+)
+
+# erasor dynamic
+add_executable( ${PROJECT_NAME}_erasor  src/erasor_dynamic.cpp)
+add_dependencies(${PROJECT_NAME}_erasor ${catkin_EXPORTED_TARGETS})
+target_compile_options(${PROJECT_NAME}_erasor PRIVATE ${OpenMP_CXX_FLAGS})
+target_link_libraries(${PROJECT_NAME}_erasor
+  ${catkin_LIBRARIES} 
+  ${PCL_LIBRARIES} 
+  ${OpenCV_LIBRARIES}
+  ${OpenMP_CXX_FLAGS}
+  ${YAML_CPP_LIBRARIES}
+  stdc++fs
+)

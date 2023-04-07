@@ -37,6 +37,8 @@
 #include <csignal>
 #include <unistd.h>
 
+#include "utility.h"
+
 
 namespace fs = std::filesystem; // file-process
 
@@ -84,24 +86,38 @@ Eigen::Vector3f rotationMatrixToEulerAngles(Eigen::Matrix3f &R){
             cloudOut_->points[i].intensity = cloudIn_->points[i].intensity;
         }
     }
-const std::string pcd_path = "/home/fyx/fastlio2/src/FAST_LIO/PCD/";
-const std::string new_pcd_path = "/home/fyx/fastlio2/src/FAST_LIO/highway_pcd/";
-const std::string pose_path = "/home/fyx/fastlio2/src/FAST_LIO/Log/poses.txt";
-const std::string new_pose_path = "/home/fyx/fastlio2/src/FAST_LIO/Log/highway_poses.txt";
+const std::string pcd_path = "/media/fyx/Yixin F/seu_mid360/urban/urban_PCD/";
+const std::string new_pcd_path = "/media/fyx/Yixin F/seu_mid360/urban/urban_use/";
+const std::string pose_path = "/media/fyx/Yixin F/seu_mid360/urban/urban_poses.txt";
+const std::string new_pose_path = "/media/fyx/Yixin F/seu_mid360/urban/poses_use.txt";
+
+const std::string erasor_pose_path = "/media/fyx/Yixin F/seu_mid360/urban/poses_erasor.txt";
+const std::string erasor_pcd_path = "/media/fyx/Yixin F/seu_mid360/urban/urban_erasor/";
+
+const int start = 1800;
+const int end = 2000;
+
 const int interval = 3;
 
-std::vector<std::string> pcd_name;
+
 std::vector<Eigen::Matrix3f> rot_name;
 std::vector<Eigen::Vector3f> trans_name;
-std::ofstream pose_out;
+std::fstream pose_out;
+std::fstream erasor_out;
 
 int main(){
-
+    
     pose_out.open(new_pose_path, std::ios::out);
+    erasor_out.open(erasor_pose_path, std::ios::out);
 
+    std::vector<std::string> pcd_name;
     for(auto& entry_ : fs::directory_iterator(pcd_path)){
+        // std::cout << entry_.path() << std::endl;
         pcd_name.emplace_back(entry_.path());
     }
+    // std::cout << 0 << std::endl;
+    std::sort(pcd_name.begin(), pcd_name.end(), fileSort);
+    // std::cout << 1 << std::endl;
 
     std::fstream pose_file;
     std::string line;
@@ -123,6 +139,7 @@ int main(){
         rot(2, 1) = atof(line_s[9].c_str());
         rot(2, 2) = atof(line_s[10].c_str());
         trans(2) = atof(line_s[11].c_str());
+        // std::cout << rot << " " << trans << std::endl;
         rot_name.emplace_back(rot);
         trans_name.emplace_back(trans);
     }
@@ -133,6 +150,9 @@ int main(){
         return -1;
     }
 
+    pcl::PointCloud<Pose>::Ptr transformt(new pcl::PointCloud<Pose>());
+
+    int count = 0;
     for(int i = 0; i < pcd_name.size() - interval; i = i + interval){
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud1(new pcl::PointCloud<pcl::PointXYZI>());
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud2(new pcl::PointCloud<pcl::PointXYZI>());
@@ -154,6 +174,16 @@ int main(){
         Eigen::Affine3f trans_2 = pcl::getTransformation(trans2(0), trans2(1), trans2(2), rpy2(0), rpy2(1), rpy2(2));
         Eigen::Affine3f trans_3 = pcl::getTransformation(trans3(0), trans3(1), trans3(2), rpy3(0), rpy3(1), rpy3(2));
 
+        Pose posei;
+        posei.x = trans2(0);
+        posei.y = trans2(1);
+        posei.z = trans2(2);
+        posei.roll = rpy2(0);
+        posei.pitch = rpy2(1);
+        posei.yaw = rpy2(2);
+        transformt->points.push_back(posei);
+
+
         Eigen::Affine3f  trans_21 = trans_2.inverse() * trans_1;
         Eigen::Affine3f  trans_23 = trans_2.inverse() * trans_3;
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud21(new pcl::PointCloud<pcl::PointXYZI>());
@@ -164,16 +194,57 @@ int main(){
         *cloud2 += *cloud21;
         *cloud2 += *cloud23;
 
-        std::string name = new_pcd_path + std::to_string(i + 1) + ".pcd";
-        pcl::io::savePCDFile(name, *cloud2);
+        // pcl::PointCloud<pcl::PointXYZI>::Ptr cloud22(new pcl::PointCloud<pcl::PointXYZI>());
+        // cloud22->height = 1;
+        // cloud22->width = cloud2->points.size();
+        // transformCloud(cloud2, trans_2, cloud22);
 
+        // pcl::PointCloud<pcl::PointXYZI>::Ptr cloud21(new pcl::PointCloud<pcl::PointXYZI>());
+        // pcl::PointCloud<pcl::PointXYZI>::Ptr cloud23(new pcl::PointCloud<pcl::PointXYZI>());
+        // pcl::PointCloud<pcl::PointXYZI>::Ptr cloud22(new pcl::PointCloud<pcl::PointXYZI>());
+        // transformCloud(cloud1, trans_1, cloud21);
+        // transformCloud(cloud3, trans_3, cloud23);
+        // transformCloud(cloud2, trans_2, cloud22);
+        // *cloud22 += *cloud21;
+        // *cloud22 += *cloud23;
+
+
+        std::string name = new_pcd_path + std::to_string(count) + ".pcd";
+        pcl::io::savePCDFile(name, *cloud2);
+        if(count >= start && count <= end){
+            std::string erasor = erasor_pcd_path + std::to_string(count - start) + ".pcd";
+            pcl::io::savePCDFile(erasor, *cloud2);
+            std::cout << "save: " << count << std::endl;
+            Eigen::Quaternionf q2(rot2);
+            Eigen::Vector4f vec = q2.coeffs();
+            erasor_out << count - start <<", " << count << ", " << trans_name[i + 1](0) << ", " << trans_name[i + 1](1) << ", " << trans_name[i + 1](2) << ", "
+                                    << vec(0) << ", " << vec(1) << ", " << vec(2) << ", " << vec(4) << "\n";
+        }
+
+        // std::string name = new_pcd_path + std::to_string(count) + ".bin";
+        // count ++;
+        // std::ofstream myFile(name.c_str(), std::ios::out | std::ios::binary | std::ios::app);
+        // std::cout << cloud2->points.size() << std::endl;
+        // for(int k = 0; k < cloud2->points.size(); k++){
+        //     myFile.write((char*)& cloud2->points[k].x, sizeof(float));
+        //     myFile.write((char*)& cloud2->points[k].y, sizeof(float));
+        //     myFile.write((char*)& cloud2->points[k].z, sizeof(float));
+        //     myFile.write((char *)& cloud2->points[k].intensity, sizeof(float));
+        // }
+        // myFile.close();
+
+        
+    
         pose_out << rot_name[i + 1](0, 0) << " " << rot_name[i + 1](0, 1) << " " << rot_name[i + 1](0, 2) << " " <<   trans_name[i + 1](0) << " "
                              << rot_name[i + 1](1, 0) << " " << rot_name[i + 1](1, 1) << " " << rot_name[i + 1](1, 2) << " " <<   trans_name[i + 1](1) << " "
-                             << rot_name[i + 1](2, 0) << " " << rot_name[i + 1](2, 1) << " " << rot_name[i + 1](2, 2) << " " <<   trans_name[i + 1](2) << " "
-                             << "\n";
+                             << rot_name[i + 1](2, 0) << " " << rot_name[i + 1](2, 1) << " " << rot_name[i + 1](2, 2) << " " <<   trans_name[i + 1](2) << "\n";
 
         std::cout <<"pcd: " << i + 1 << std::endl;
+        count ++;
     }
+    transformt->height = 1;
+    transformt->width = count;
+    pcl::io::savePCDFile("/media/fyx/Yixin F/seu_mid360/urban/urban_transform.pcd", *transformt);
     pose_out.close();
 
     return 0;

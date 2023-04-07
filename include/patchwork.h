@@ -121,8 +121,8 @@ private:
     int num_rings_of_interest_ = 2.7;
 
     double sensor_height_;  // 1.732
-    double th_seeds_ = 0.5;
-    double th_dist_ = 0.125;  
+    double th_seeds_ = 0.3;  // 0.5
+    double th_dist_ = 0.1;   // 0.125
     double max_range_ = 80.0;
     double min_range_ = 2.7;  
     double uprightness_thr_ = 0.707;  // 0.707

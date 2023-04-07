@@ -443,7 +443,7 @@ void SSC::refineClusterByBoundingBox(Frame& frame_ssc_){
 
             erase_id.emplace_back(c.first);
             // frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
-            if(point_min.z < refine_height ||  (c.second.occupy_pts.size() < toBeClass) || diff_z < 0.2){
+            if(point_min.z < refine_height ||  (c.second.occupy_pts.size() < toBeClass)){  // diff_z < 0.2
                 frame_ssc_.dynamic_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
             }{
                 frame_ssc_.static_pt.emplace_back(c.second.occupy_pts);  // TODO: evaluate
@@ -622,8 +622,8 @@ void SSC::refineClusterByIntensity(Frame& frame_ssc){
             frame_ssc.cluster_set.insert(std::make_pair(cluster_fusion.name, cluster_fusion));
         }
         
-        std::string name = seg_save + std::to_string(stage) + "_";
-        saveSegCloud(frame_ssc, frame_ssc.cloud_use, name, 1);
+        // std::string name = seg_save + std::to_string(stage) + "_";
+        // saveSegCloud(frame_ssc, frame_ssc.cloud_use, name, 1);
 
         iter --;
         stage ++;
@@ -796,18 +796,18 @@ bool SSC::regionGrowing(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cluster_clou
     pcl::NormalEstimation<pcl::PointXYZI, pcl::Normal> normal_estimator;
     normal_estimator.setSearchMethod (tree);
     normal_estimator.setInputCloud (cluster_cloud_);
-    normal_estimator.setKSearch(toBeClass);
+    normal_estimator.setKSearch(10);
     normal_estimator.compute (*normals);
 
     pcl::RegionGrowing<pcl::PointXYZI, pcl::Normal> reg;
-    reg.setMinClusterSize (toBeClass * 2); 
+    reg.setMinClusterSize (20); 
     reg.setMaxClusterSize (1000000);
     reg.setSearchMethod (tree);
-    reg.setNumberOfNeighbours (toBeClass * 1);
+    reg.setNumberOfNeighbours (10* 1);
     reg.setInputCloud (cluster_cloud_);
     reg.setInputNormals (normals);
-    reg.setSmoothnessThreshold (8.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
-    reg.setCurvatureThreshold (0.8);
+    reg.setSmoothnessThreshold (10.0 / 180.0 * M_PI);  // TODO: ? it is hard to get this value
+    reg.setCurvatureThreshold (1.2);
 
     std::vector <pcl::PointIndices> clusters;
     reg.extract (clusters);
@@ -914,7 +914,7 @@ void SSC::getPose(){
             ROS_WARN("the start or end index set error");
             ros::shutdown();
         }
-        for(size_t i = start; i < end; i++){
+        for(size_t i = start; i < end; i = i + skip){
             pose_vec.emplace_back(pose_tmp->points[i]);
         }
     }
@@ -1003,10 +1003,14 @@ void SSC::getCloud(){
             ros::shutdown();
         }
 
-        for(size_t i = start; i < end; i++){
+        for(size_t i = start; i < end; i = i + skip){
             pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_tmp(new pcl::PointCloud<pcl::PointXYZI>());
             loadCloud(cloud_tmp, cloud_name[i]);
             cloud_vec.emplace_back(cloud_tmp);
+            pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_tmp_new(new pcl::PointCloud<pcl::PointXYZI>());
+            Eigen::Affine3f trans = pcl::getTransformation(pose_vec[i-start].x, pose_vec[i-start].y, pose_vec[i-start].z, pose_vec[i-start].roll, pose_vec[i-start].pitch, pose_vec[i-start].yaw);
+            transformCloud(cloud_tmp, trans, cloud_tmp_new);
+            eva_ori.emplace_back(cloud_tmp_new);
         }
     }
     else{  //TODO:
@@ -1423,7 +1427,7 @@ void SSC::segDF(){
         ROS_INFO("frame %d is added into the segDF", id);
         process(cloud);
         segment();
-        // saveSegCloud(frame_ssc, frame_ssc.cloud_use, seg_save, 1);
+        saveSegCloud(frame_ssc, frame_ssc.cloud_use, seg_save, 1);
         recognize(frame_ssc);
         frame_set.emplace_back(frame_ssc);
         reset();
