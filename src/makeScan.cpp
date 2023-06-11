@@ -86,16 +86,16 @@ Eigen::Vector3f rotationMatrixToEulerAngles(Eigen::Matrix3f &R){
             cloudOut_->points[i].intensity = cloudIn_->points[i].intensity;
         }
     }
-const std::string pcd_path = "/media/fyx/Yixin F/seu_mid360/urban/urban_PCD/";
-const std::string new_pcd_path = "/media/fyx/Yixin F/seu_mid360/urban/urban_use/";
-const std::string pose_path = "/media/fyx/Yixin F/seu_mid360/urban/urban_poses.txt";
-const std::string new_pose_path = "/media/fyx/Yixin F/seu_mid360/urban/poses_use.txt";
+const std::string pcd_path = "/media/fyx/Yixin F/seu_mid360/highway/highway_PCD/";
+const std::string new_pcd_path = "/media/fyx/Yixin F/seu_mid360/highway/highway_use/";
+const std::string pose_path = "/media/fyx/Yixin F/seu_mid360/highway/highway_poses.txt";
+const std::string new_pose_path = "/media/fyx/Yixin F/seu_mid360/highway/poses_use.txt";
 
-const std::string erasor_pose_path = "/media/fyx/Yixin F/seu_mid360/urban/poses_erasor.txt";
-const std::string erasor_pcd_path = "/media/fyx/Yixin F/seu_mid360/urban/urban_erasor/";
+const std::string erasor_pose_path = "/media/fyx/Yixin F/seu_mid360/highway/poses_erasor.txt";
+const std::string erasor_pcd_path = "/media/fyx/Yixin F/seu_mid360/highway/highway_erasor/";
 
-const int start = 1800;
-const int end = 2000;
+const int start = 900;
+const int end = 1100;
 
 const int interval = 3;
 

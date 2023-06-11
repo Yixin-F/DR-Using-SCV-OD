@@ -50,6 +50,8 @@ public:
     int name = 0;  // record cluster tracked
     std::vector<Frame> frame_set;
 
+    ofstream ofs;    // recrord time
+
     ~SSC();
     SSC();
 

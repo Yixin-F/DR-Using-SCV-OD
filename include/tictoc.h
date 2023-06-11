@@ -11,6 +11,8 @@
 #include <chrono>
 #include <fstream>
 
+
+
 class TicToc
 {
 public:
@@ -29,7 +31,8 @@ public:
     {
         start = std::chrono::system_clock::now();
     }
-
+    
+    
     // double toc( std::string _about_task )
     // {
     //     end = std::chrono::system_clock::now();
@@ -40,6 +43,7 @@ public:
     //     {
     //       std::cout.precision(3); // 10 for sec, 3 for ms 
     //       std::cout << _about_task  << ": " << elapsed_ms << " msec." << std::endl;
+
     //     }
 
     //     return elapsed_ms;    
